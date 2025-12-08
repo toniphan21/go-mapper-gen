@@ -1,0 +1,62 @@
+@go.Package { name = "github.com/toniphan21/go-mapper-gen/internal/config/internal/gen" }
+module gomappergen.Config
+
+import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.11.1#/go.pkl"
+
+typealias PackagePath = String
+
+class Output {
+  package: String?
+  file_name: String?
+  test_file_name: String?
+}
+
+open class Base {
+  output: Output?
+}
+
+class MapperStruct {
+  source_struct_name: String?
+  source_pkg: String?
+  source_to_target_function_name: String?
+  source_from_target_function_name: String?
+  decorator_function_name: String?
+
+  pointer: "none" | "source-only" | "target-only" | "both" = "none"
+  field_name_match: "exact" | "ignore-case" = "ignore-case"
+
+  generate_source_to_target: Boolean = true
+  generate_source_from_target: Boolean = true
+}
+
+open class BaseMapper extends Base {
+  interface_name: String = "iMapper"
+  implementation_name: String = "iMapperImpl"
+  constructor_name: String = "new_iMapper"
+
+  source_to_target_function_name: String = "To{TargetStructName}"
+  source_from_target_function_name: String = "From{SourceStructName}"
+  decorator_function_name: String = "decorator{FunctionName}"
+
+  target_pkg: String? = "{CurrentPackage}"
+  source_pkg: String
+
+  structs: Mapping<String, MapperStruct>
+
+  generate_go_doc: Boolean = true
+  ignored: Boolean = false
+}
+
+class Mapper extends BaseMapper {
+  priorities: Mapping<Int, BaseMapper>?
+}
+
+all: Base = new Base {
+  output {
+    package = "{CurrentPackageName}"
+    file_name = "gen_mapper.go"
+    test_file_name = "gen_mapper_test.go"
+  }
+}
+
+packages: Mapping<PackagePath, Mapper>
