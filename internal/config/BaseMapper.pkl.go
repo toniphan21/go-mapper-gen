@@ -1,5 +1,5 @@
 // Code generated from Pkl module `gomappergen.Config`. DO NOT EDIT.
-package gen
+package config
 
 type BaseMapper interface {
 	Base
@@ -14,17 +14,17 @@ type BaseMapper interface {
 
 	GetSourceFromTargetFunctionName() string
 
-	GetDecoratorFunctionName() string
+	GetDecoratorInterfaceName() string
 
-	GetTargetPkg() *string
+	GetDecorateFunctionName() string
+
+	GetTargetPkg() string
 
 	GetSourcePkg() string
 
 	GetStructs() map[string]MapperStruct
 
 	GetGenerateGoDoc() bool
-
-	GetIgnored() bool
 }
 
 var _ BaseMapper = BaseMapperImpl{}
@@ -42,17 +42,17 @@ type BaseMapperImpl struct {
 
 	SourceFromTargetFunctionName string `pkl:"source_from_target_function_name"`
 
-	DecoratorFunctionName string `pkl:"decorator_function_name"`
+	DecoratorInterfaceName string `pkl:"decorator_interface_name"`
 
-	TargetPkg *string `pkl:"target_pkg"`
+	DecorateFunctionName string `pkl:"decorate_function_name"`
+
+	TargetPkg string `pkl:"target_pkg"`
 
 	SourcePkg string `pkl:"source_pkg"`
 
 	Structs map[string]MapperStruct `pkl:"structs"`
 
 	GenerateGoDoc bool `pkl:"generate_go_doc"`
-
-	Ignored bool `pkl:"ignored"`
 }
 
 func (rcv BaseMapperImpl) GetInterfaceName() string {
@@ -75,11 +75,15 @@ func (rcv BaseMapperImpl) GetSourceFromTargetFunctionName() string {
 	return rcv.SourceFromTargetFunctionName
 }
 
-func (rcv BaseMapperImpl) GetDecoratorFunctionName() string {
-	return rcv.DecoratorFunctionName
+func (rcv BaseMapperImpl) GetDecoratorInterfaceName() string {
+	return rcv.DecoratorInterfaceName
 }
 
-func (rcv BaseMapperImpl) GetTargetPkg() *string {
+func (rcv BaseMapperImpl) GetDecorateFunctionName() string {
+	return rcv.DecorateFunctionName
+}
+
+func (rcv BaseMapperImpl) GetTargetPkg() string {
 	return rcv.TargetPkg
 }
 
@@ -93,8 +97,4 @@ func (rcv BaseMapperImpl) GetStructs() map[string]MapperStruct {
 
 func (rcv BaseMapperImpl) GetGenerateGoDoc() bool {
 	return rcv.GenerateGoDoc
-}
-
-func (rcv BaseMapperImpl) GetIgnored() bool {
-	return rcv.Ignored
 }

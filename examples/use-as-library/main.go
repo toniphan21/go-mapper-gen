@@ -9,5 +9,6 @@ import (
 func main() {
 	fmt.Println("Use go-mapper-gen as library")
 
-	_ = gomappergen.Generate(nil, nil, nil)
+	gomappergen.RegisterAllBuiltinConverters()
+	_ = gomappergen.Generate(nil, nil, gomappergen.Config{})
 }

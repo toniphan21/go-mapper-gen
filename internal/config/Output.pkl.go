@@ -1,5 +1,5 @@
 // Code generated from Pkl module `gomappergen.Config`. DO NOT EDIT.
-package gen
+package config
 
 type Output struct {
 	Package *string `pkl:"package"`

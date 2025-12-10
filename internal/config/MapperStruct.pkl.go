@@ -1,7 +1,9 @@
 // Code generated from Pkl module `gomappergen.Config`. DO NOT EDIT.
-package gen
+package config
 
 type MapperStruct struct {
+	TargetPkg *string `pkl:"target_pkg"`
+
 	SourceStructName *string `pkl:"source_struct_name"`
 
 	SourcePkg *string `pkl:"source_pkg"`
@@ -10,7 +12,7 @@ type MapperStruct struct {
 
 	SourceFromTargetFunctionName *string `pkl:"source_from_target_function_name"`
 
-	DecoratorFunctionName *string `pkl:"decorator_function_name"`
+	DecorateFunctionName *string `pkl:"decorate_function_name"`
 
 	Pointer string `pkl:"pointer"`
 

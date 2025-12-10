@@ -1,4 +1,4 @@
-@go.Package { name = "github.com/toniphan21/go-mapper-gen/internal/config/internal/gen" }
+@go.Package { name = "github.com/toniphan21/go-mapper-gen/internal/config" }
 module gomappergen.Config
 
 import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.11.1#/go.pkl"
@@ -16,11 +16,12 @@ open class Base {
 }
 
 class MapperStruct {
+  target_pkg: String?
   source_struct_name: String?
   source_pkg: String?
   source_to_target_function_name: String?
   source_from_target_function_name: String?
-  decorator_function_name: String?
+  decorate_function_name: String?
 
   pointer: "none" | "source-only" | "target-only" | "both" = "none"
   field_name_match: "exact" | "ignore-case" = "ignore-case"
@@ -35,16 +36,17 @@ open class BaseMapper extends Base {
   constructor_name: String = "new_iMapper"
 
   source_to_target_function_name: String = "To{TargetStructName}"
-  source_from_target_function_name: String = "From{SourceStructName}"
-  decorator_function_name: String = "decorator{FunctionName}"
+  source_from_target_function_name: String = "From{TargetStructName}"
 
-  target_pkg: String? = "{CurrentPackage}"
+  decorator_interface_name: String = "iMapperDecorator"
+  decorate_function_name: String = "decorate{FunctionName}"
+
+  target_pkg: String = "{CurrentPackage}"
   source_pkg: String
 
   structs: Mapping<String, MapperStruct>
 
   generate_go_doc: Boolean = true
-  ignored: Boolean = false
 }
 
 class Mapper extends BaseMapper {

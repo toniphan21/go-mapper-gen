@@ -3,11 +3,13 @@ amends ".../Config.pkl"
 all { output { file_name = "mycode.go" }}
 
 packages {
-  ["github.com/tonisphan/awesome"] {
+  ["github.com/toniphan21/awesome"] {
     source_pkg = ""
 
     structs {
-      ["LoginParams"] { source_struct_name = "Login" generate_source_from_target = false }
+      ["LoginParams"] {
+        source_struct_name = "Login"
+      }
     }
   }
 }
