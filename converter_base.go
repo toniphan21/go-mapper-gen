@@ -132,7 +132,8 @@ func (s *sliceConverter) Assign(file *jen.File, target, source Symbol, opt Conve
 		return nil
 	}
 
-	targetSymbol := Symbol{VarName: "converted", Type: ts}
+	targetSymbol := target.ToIndexedSymbol("i")
+	targetSymbol.Type = ts
 	sourceSymbol := Symbol{VarName: "v", Type: ss}
 	convertCode := c.Assign(file, targetSymbol, sourceSymbol, opt)
 	if convertCode == nil {
@@ -149,9 +150,7 @@ func (s *sliceConverter) Assign(file *jen.File, target, source Symbol, opt Conve
 		).Line()
 
 		gc = gc.For(jen.List(jen.Id("i"), jen.Id("v")).Op(":=").Range().Add(source.Expr())).Block(
-			jen.Var().Id("converted").Add(GeneratorUtil.TypeToJenCode(ts)),
 			convertCode,
-			target.Expr().Index(jen.Id("i")).Op("=").Id("converted"),
 		)
 	})
 	return GeneratorUtil.GenerateWithConverterOption(code, opt, "built-in sliceConverter.Assign()")

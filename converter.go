@@ -45,6 +45,15 @@ func (s Symbol) Expr() *jen.Statement {
 	return jen.Id(s.VarName).Dot(*s.FieldName)
 }
 
+func (s Symbol) ToIndexedSymbol(idx string) Symbol {
+	if s.FieldName == nil {
+		return Symbol{VarName: s.VarName + "[" + idx + "]", FieldName: nil, Type: s.Type}
+	}
+	fieldName := *s.FieldName
+	fieldName += "[" + idx + "]"
+	return Symbol{VarName: s.VarName, FieldName: &fieldName, Type: s.Type}
+}
+
 // Converter defines a pluggable conversion rule used by the mapper generator.
 // Implementations decide whether they support converting between two Go types
 // and, if so, generate the appropriate code snippets using jennifer.
