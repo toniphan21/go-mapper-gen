@@ -120,7 +120,7 @@ func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
 	expected := make(map[string]string)
 	for _, config := range configs {
 		jf := MakeJenFile(pkg, config)
-		err := Generate(jf, pkg, config)
+		err := Generate(jf, pkg, []Config{config})
 		require.NoError(t, err, "cannot generate failed")
 
 		generated := jf.GoString()

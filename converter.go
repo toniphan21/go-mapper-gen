@@ -34,6 +34,14 @@ type Symbol struct {
 	Type      types.Type
 }
 
+func newSymbol(varName string, fieldName string, typ types.Type) Symbol {
+	if fieldName == "" {
+		return Symbol{VarName: varName, FieldName: nil, Type: typ}
+	}
+	var fn = fieldName
+	return Symbol{VarName: varName, FieldName: &fn, Type: typ}
+}
+
 type ConverterOption struct {
 	EmitTraceComments bool
 }
@@ -244,4 +252,13 @@ func RegisterBaseConverters() {
 	registerConverter(&sliceConverter{}, 1, true)
 	registerConverter(&typeToPointerConverter{}, 2, true)
 	registerConverter(&pointerToTypeConverter{}, 3, true)
+}
+
+func FindConverter(targetType, sourceType types.Type) (Converter, bool) {
+	for _, reg := range converters {
+		if reg.converter.CanConvert(targetType, sourceType) {
+			return reg.converter, true
+		}
+	}
+	return nil, false
 }

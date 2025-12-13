@@ -45,7 +45,7 @@ func RunCLI() {
 	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
 	gen.PrintRegisteredConverters(logger)
 
-	for _, config := range cf {
-		_ = gen.Generate(nil, nil, config)
+	for _, configs := range cf {
+		_ = gen.Generate(nil, nil, configs)
 	}
 }

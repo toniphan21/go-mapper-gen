@@ -1,59 +1,94 @@
 package gomappergen
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/toniphan21/go-mapper-gen/internal/parse"
 )
 
-func Test_mapFields(t *testing.T) {
+func Test_mapFieldNames(t *testing.T) {
 	cases := []struct {
 		name     string
 		target   []string
 		source   []string
-		match    NameMatch
+		config   FieldConfig
 		expected map[string]string
 	}{
 		{
-			name:  "number of fields are the same, match ignored case",
-			match: NameMatchIgnoreCase,
-			target: []string{
-				`Id int`,
-				`fieldName string`,
-			},
-			source: []string{
-				`ID int`,
-				`fieldName string`,
-			},
-			expected: map[string]string{
-				"Id":        "ID",
-				"fieldName": "FieldName",
-			},
+			name:     "number of fields are the same, match ignored case",
+			config:   FieldConfig{NameMatch: NameMatchIgnoreCase},
+			target:   []string{`Id`, `fieldName`},
+			source:   []string{`ID`, `FieldName`},
+			expected: map[string]string{"Id": "ID", "fieldName": "FieldName"},
 		},
 
 		{
-			name:  "number of fields are the same, match exact",
-			match: NameMatchExact,
-			target: []string{
-				`fieldName string`,
-				`Id int`,
-				`Data []byte`,
-				`A bool`,
-			},
-			source: []string{
-				`A bool`,
-				`ID int`,
-				`fieldName string`,
-				`Data []byte`,
-			},
-			expected: map[string]string{
-				"A":    "A",
-				"Data": "Data",
-			},
+			name:     "number of fields are the same, match exact",
+			config:   FieldConfig{NameMatch: NameMatchExact},
+			target:   []string{`Data`, `A`},
+			source:   []string{`A`, `Data`},
+			expected: map[string]string{"Data": "Data", "A": "A"},
 		},
+
+		{
+			name:     "number of fields are the same, match exact, miss some fields",
+			config:   FieldConfig{NameMatch: NameMatchExact},
+			target:   []string{`FieldName`, `Id`, `Data`, `A`},
+			source:   []string{`A`, `ID`, `fieldName`, `Data`},
+			expected: map[string]string{"FieldName": "", "Id": "", "Data": "Data", "A": "A"},
+		},
+
+		{
+			name:     "target is shorter mapped all by name match ignore case",
+			config:   FieldConfig{NameMatch: NameMatchIgnoreCase},
+			target:   []string{`Id`, `Data`, `A`},
+			source:   []string{`A`, `ID`, `fieldName`, `Data`},
+			expected: map[string]string{"Id": "ID", "Data": "Data", "A": "A"},
+		},
+
+		{
+			name: "target is shorter mapped all by manual map",
+			config: FieldConfig{NameMatch: NameMatchExact, ManualMap: map[string]string{
+				"Id": "UserID", "Data": "UserData", "A": "An",
+			}},
+			target:   []string{`Id`, `Data`, `A`},
+			source:   []string{`An`, `UserID`, `fieldName`, `UserData`},
+			expected: map[string]string{"Id": "UserID", "Data": "UserData", "A": "An"},
+		},
+
+		{
+			name: "manual map to unknown source will be ignored",
+			config: FieldConfig{NameMatch: NameMatchExact, ManualMap: map[string]string{
+				"Id": "UserID", "Data": "UserData", "A": "An",
+			}},
+			target:   []string{`Id`, `Data`, `A`},
+			source:   []string{`An`, `UserID`, `fieldName`},
+			expected: map[string]string{"Id": "UserID", "Data": "", "A": "An"},
+		},
+
+		{
+			name: "manual map will skip name match",
+			config: FieldConfig{NameMatch: NameMatchExact, ManualMap: map[string]string{
+				"Id": "UserID", "Data": "",
+			}},
+			target:   []string{`Id`, `Data`, "A"},
+			source:   []string{`Data`, `UserID`, `A`},
+			expected: map[string]string{"Id": "UserID", "Data": "", "A": "A"},
+		},
+
+		{
+			name: "target is longer, match name and manual map with unknown source field",
+			config: FieldConfig{NameMatch: NameMatchExact, ManualMap: map[string]string{
+				"Id": "UserID", "Data": "UserData",
+			}},
+			target:   []string{`Id`, `Data`, "Profile", "Password", "Email"},
+			source:   []string{`Data`, `UserID`, `profile`, "Password"},
+			expected: map[string]string{"Id": "UserID", "Data": "", "Profile": "", "Password": "Password", "Email": ""},
+		},
+		// ---
 	}
 
 	for _, tc := range cases {
@@ -64,13 +99,13 @@ func Test_mapFields(t *testing.T) {
 				`type Target struct {`,
 			}
 			for _, c := range tc.target {
-				code = append(code, c)
+				code = append(code, c+" string")
 			}
 			code = append(code, `}`)
 			code = append(code, ``)
 			code = append(code, `type Source struct {`)
 			for _, c := range tc.source {
-				code = append(code, c)
+				code = append(code, c+" string")
 			}
 			code = append(code, `}`)
 			code = append(code, ``)
@@ -102,8 +137,8 @@ func Test_mapFields(t *testing.T) {
 			targetFields := parse.StructFields(pkg, targetStruct)
 			sourceFields := parse.StructFields(pkg, sourceStruct)
 
-			result := mapFields(targetFields, sourceFields, tc.match)
-			fmt.Println(result)
+			result := mapFieldNames(targetFields, sourceFields, tc.config)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }

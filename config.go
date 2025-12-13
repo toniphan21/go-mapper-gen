@@ -32,6 +32,17 @@ type FieldConfig struct {
 	ManualMap map[string]string
 }
 
+func (c FieldConfig) Flip() FieldConfig {
+	if c.ManualMap == nil {
+		return FieldConfig{NameMatch: c.NameMatch, ManualMap: nil}
+	}
+	mm := make(map[string]string)
+	for k, v := range c.ManualMap {
+		mm[v] = k
+	}
+	return FieldConfig{NameMatch: c.NameMatch, ManualMap: mm}
+}
+
 type TypeConfig struct {
 	PackagePath string
 	TypeName    string

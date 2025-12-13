@@ -10,5 +10,7 @@ func main() {
 	fmt.Println("Use go-mapper-gen as library")
 
 	gomappergen.RegisterAllBuiltinConverters()
-	_ = gomappergen.Generate(nil, nil, gomappergen.Config{})
+
+	var configs []gomappergen.Config
+	_ = gomappergen.Generate(nil, nil, configs)
 }
