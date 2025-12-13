@@ -66,7 +66,8 @@ type expectedStruct struct {
 	SourceFromTargetFuncName *string
 	DecorateFuncName         *string
 	Pointer                  *Pointer
-	FieldNameMatch           *FieldNameMatch
+	FieldsNameMatch          *NameMatch
+	FieldsManualMap          *map[string]string
 	GenerateSourceToTarget   *bool
 	GenerateSourceFromTarget *bool
 }
@@ -109,13 +110,13 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) Config {
 	}
 
 	for _, v := range structs {
-		defaultStructCf := Struct{
+		defaultStructCf := StructConfig{
 			TargetPkgPath:            Placeholder.CurrentPackage,
 			SourceToTargetFuncName:   Default.SourceToTargetFuncName,
 			SourceFromTargetFuncName: Default.SourceFromTargetFuncName,
 			DecorateFuncName:         Default.DecorateFuncName,
 			Pointer:                  PointerNone,
-			FieldNameMatch:           FieldNameMatchIgnoreCase,
+			Fields:                   FieldConfig{NameMatch: NameMatchIgnoreCase},
 			GenerateSourceToTarget:   true,
 			GenerateSourceFromTarget: true,
 		}
@@ -141,8 +142,11 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) Config {
 		if v.Pointer != nil {
 			item.Pointer = *v.Pointer
 		}
-		if v.FieldNameMatch != nil {
-			item.FieldNameMatch = *v.FieldNameMatch
+		if v.FieldsNameMatch != nil {
+			item.Fields.NameMatch = *v.FieldsNameMatch
+		}
+		if v.FieldsManualMap != nil {
+			item.Fields.ManualMap = *v.FieldsManualMap
 		}
 		if v.GenerateSourceToTarget != nil {
 			item.GenerateSourceToTarget = *v.GenerateSourceToTarget
@@ -159,7 +163,7 @@ func TestParseConfig(t *testing.T) {
 	cases := []struct {
 		name     string
 		config   []string
-		expected map[string]Config
+		expected map[string][]Config
 	}{
 		{
 			name: "empty config",
@@ -170,7 +174,7 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string]Config{},
+			expected: map[string][]Config{},
 		},
 
 		{
@@ -185,12 +189,14 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string]Config{
-				"github.com/example/repo": buildConfig(nil, expectedStruct{
-					TargetStructName: "Target",
-					SourceStructName: "Target",
-					SourcePkgPath:    "{CurrentPackage}/source",
-				}),
+			expected: map[string][]Config{
+				"github.com/example/repo": {
+					buildConfig(nil, expectedStruct{
+						TargetStructName: "Target",
+						SourceStructName: "Target",
+						SourcePkgPath:    "{CurrentPackage}/source",
+					}),
+				},
 			},
 		},
 
@@ -206,12 +212,14 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string]Config{
-				"github.com/example/repo": buildConfig(nil, expectedStruct{
-					TargetStructName: "Target",
-					SourceStructName: "Source",
-					SourcePkgPath:    "{CurrentPackage}/source",
-				}),
+			expected: map[string][]Config{
+				"github.com/example/repo": {
+					buildConfig(nil, expectedStruct{
+						TargetStructName: "Target",
+						SourceStructName: "Source",
+						SourcePkgPath:    "{CurrentPackage}/source",
+					}),
+				},
 			},
 		},
 
@@ -231,16 +239,18 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string]Config{
-				"github.com/example/repo": buildConfig(nil, expectedStruct{
-					TargetStructName: "Target",
-					SourceStructName: "Source",
-					SourcePkgPath:    "{CurrentPackage}/source",
-				}, expectedStruct{
-					TargetStructName: "OverrideSourcePkg",
-					SourceStructName: "Source",
-					SourcePkgPath:    "{CurrentPackage}/another-source",
-				}),
+			expected: map[string][]Config{
+				"github.com/example/repo": {
+					buildConfig(nil, expectedStruct{
+						TargetStructName: "Target",
+						SourceStructName: "Source",
+						SourcePkgPath:    "{CurrentPackage}/source",
+					}, expectedStruct{
+						TargetStructName: "OverrideSourcePkg",
+						SourceStructName: "Source",
+						SourcePkgPath:    "{CurrentPackage}/another-source",
+					}),
+				},
 			},
 		},
 		// ---

@@ -13,6 +13,31 @@ class Output {
 
 open class Base {
   output: Output?
+  convert_functions: Listing<ConvertFunc>?
+}
+
+class Func {
+  pkg: String
+  func: String
+  var_name: String?
+}
+
+class Type {
+  pkg: String
+  type: String
+  pointer: Boolean = false
+}
+
+class ConvertFunc {
+  target: Type | String
+  source: Type | String
+  convert_by: Func | String
+}
+
+class Fields {
+  match: "exact" | "ignore-case" = "ignore-case"
+
+  map: Mapping<String, String>?
 }
 
 class MapperStruct {
@@ -24,7 +49,10 @@ class MapperStruct {
   decorate_function_name: String?
 
   pointer: "none" | "source-only" | "target-only" | "both" = "none"
-  field_name_match: "exact" | "ignore-case" = "ignore-case"
+
+  fields: Fields = new Fields {
+    match = "ignore-case"
+  }
 
   generate_source_to_target: Boolean = true
   generate_source_from_target: Boolean = true

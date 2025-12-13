@@ -25,29 +25,32 @@ type GoldenTestCase struct {
 	Package            string
 	SourceFileContents map[string][]byte
 	PklFileContent     []byte
-	GoldenFileContent  []byte
+	GoldenFileContent  map[string][]byte
 }
 
 type ConverterTestCase struct {
-	Name                 string
-	Imports              map[string]string
-	GoModGoVersion       string
-	GoModRequires        []string
-	GoModModule          string
-	TargetType           string
-	SourceType           string
-	CurrentVarCount      int
-	ExpectedCanConvert   bool
-	ExpectedImports      []string
-	ExpectedCode         []string
-	ExpectedNextVarCount int
-	PrintSetUp           bool
+	Name                         string
+	Imports                      map[string]string
+	GoModGoVersion               string
+	GoModRequires                []string
+	GoModModule                  string
+	TargetType                   string
+	SourceType                   string
+	ConverterOption              ConverterOption
+	CurrentVarCount              int
+	TargetSymbolWithoutFieldName bool
+	SourceSymbolWithoutFieldName bool
+	ExpectedCanConvert           bool
+	ExpectedImports              []string
+	ExpectedCode                 []string
+	ExpectedNextVarCount         int
+	PrintSetUp                   bool
 }
 
 type testHelper struct {
 }
 
-func (h *testHelper) SetupConfig(t *testing.T, lines ...string) (map[string]Config, error) {
+func (h *testHelper) SetupConfig(t *testing.T, lines ...string) (map[string][]Config, error) {
 	dir := setup.SourceCode(t, setup.PklLibFiles(), file.PklDevConfigFile(lines...))
 
 	return ParseConfig(filepath.Join(dir, "dev/config.pkl"))
@@ -79,7 +82,7 @@ func (h *testHelper) ParsePackage(t *testing.T, files []file.File, runGoModTidy 
 	return nil, errors.New("package not found")
 }
 
-func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (*packages.Package, Config) {
+func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (*packages.Package, []Config) {
 	configs, err := Test.SetupConfig(t, string(tc.PklFileContent))
 	require.NoError(t, err, "cannot set up pkl config file")
 
@@ -109,16 +112,23 @@ func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (*pack
 }
 
 func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
-	pkg, config := h.SetupGoldenTestCase(t, tc)
+	pkg, configs := h.SetupGoldenTestCase(t, tc)
 
 	RegisterAllBuiltinConverters()
 
-	jf := MakeJenFile(pkg, config)
-	err := Generate(jf, pkg, config)
-	require.NoError(t, err, "cannot generate failed")
+	output := make(map[string]string)
+	expected := make(map[string]string)
+	for _, config := range configs {
+		jf := MakeJenFile(pkg, config)
+		err := Generate(jf, pkg, config)
+		require.NoError(t, err, "cannot generate failed")
 
-	output := jf.GoString()
-	expected := string(tc.GoldenFileContent)
+		generated := jf.GoString()
+		output[config.Output.FileName] = generated
+		for k, v := range tc.GoldenFileContent {
+			expected[k] = string(v)
+		}
+	}
 	assert.Equal(t, expected, output, "generated file does not match golden file")
 }
 
@@ -199,21 +209,45 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 		return
 	}
 
-	targetSymbol := Symbol{VarName: "out", FieldName: "targetField", Type: targetType}
-	sourceSymbol := Symbol{VarName: "in", FieldName: "sourceField", Type: sourceType}
+	targetField := "targetField"
+	sourceField := "sourceField"
+	targetSymbol := Symbol{VarName: "out", Type: targetType}
+	sourceSymbol := Symbol{VarName: "in", Type: sourceType}
+	if !tc.TargetSymbolWithoutFieldName {
+		targetSymbol.FieldName = &targetField
+	} else {
+		targetSymbol.VarName = "target"
+	}
+
+	if !tc.SourceSymbolWithoutFieldName {
+		sourceSymbol.FieldName = &sourceField
+	} else {
+		sourceSymbol.VarName = "source"
+	}
 
 	jf := jen.NewFilePathName(goMod.GetModule(), "test")
 
 	var blocks []jen.Code
-	bc, nvc := converter.Before(jf, targetSymbol, sourceSymbol, tc.CurrentVarCount)
+	if tc.TargetSymbolWithoutFieldName {
+		blocks = append(blocks, jen.Var().Id("target").Add(GeneratorUtil.TypeToJenCode(targetType)))
+	}
+	if tc.SourceSymbolWithoutFieldName {
+		blocks = append(blocks, jen.Id("source").Op(":=").Id("in").Dot("sourceField"))
+	}
+
+	bc, nvc := converter.Before(jf, targetSymbol, sourceSymbol, tc.CurrentVarCount, tc.ConverterOption)
 	if bc != nil {
 		blocks = append(blocks, bc)
 	}
 	assert.Equal(t, tc.ExpectedNextVarCount, nvc)
 
-	c := converter.Assign(jf, targetSymbol, sourceSymbol)
+	c := converter.Assign(jf, targetSymbol, sourceSymbol, tc.ConverterOption)
 	if c != nil {
 		blocks = append(blocks, c)
+	}
+
+	if tc.TargetSymbolWithoutFieldName {
+		blocks = append(blocks, jen.Id("out").Dot("targetField").Op("=").Id("target"))
 	}
 
 	if len(blocks) == 0 {
@@ -237,8 +271,17 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 	}
 
 	expected = append(expected, `func convert(in *Source, out *Target) {`)
+	if tc.TargetSymbolWithoutFieldName {
+		expected = append(expected, "\tvar target "+tc.TargetType)
+	}
+	if tc.SourceSymbolWithoutFieldName {
+		expected = append(expected, "\tsource := in.sourceField")
+	}
 	for _, v := range tc.ExpectedCode {
 		expected = append(expected, "\t"+v)
+	}
+	if tc.TargetSymbolWithoutFieldName {
+		expected = append(expected, "\tout.targetField = target")
 	}
 	expected = append(expected, "}")
 	expected = append(expected, "")

@@ -22,6 +22,7 @@ func Test_typeToPointerConverter(t *testing.T) {
 			ExpectedCanConvert: true,
 			ExpectedCode:       []string{"out.targetField = &in.sourceField"},
 		},
+
 		{
 			Name:               "pgtype.Text to *pgtype.Text",
 			Imports:            map[string]string{"pgtype": "github.com/jackc/pgx/v5/pgtype"},
@@ -31,6 +32,48 @@ func Test_typeToPointerConverter(t *testing.T) {
 			ExpectedCanConvert: true,
 			ExpectedCode:       []string{"out.targetField = &in.sourceField"},
 		},
+
+		{
+			Name:               "emit trace comments",
+			SourceType:         "bool",
+			TargetType:         "*bool",
+			ConverterOption:    ConverterOption{EmitTraceComments: true},
+			ExpectedCanConvert: true,
+			ExpectedCode: []string{
+				"// built-in typeToPointerConverter.Assign() generated code start",
+				"out.targetField = &in.sourceField",
+				"// built-in typeToPointerConverter.Assign() generated code end",
+			},
+		},
+
+		{
+			Name:                         "without fieldName in targetSymbol",
+			SourceType:                   "bool",
+			TargetType:                   "*bool",
+			TargetSymbolWithoutFieldName: true,
+			ExpectedCanConvert:           true,
+			ExpectedCode:                 []string{"target = &in.sourceField"},
+		},
+
+		{
+			Name:                         "without fieldName in sourceSymbol",
+			SourceType:                   "bool",
+			TargetType:                   "*bool",
+			SourceSymbolWithoutFieldName: true,
+			ExpectedCanConvert:           true,
+			ExpectedCode:                 []string{"out.targetField = &source"},
+		},
+
+		{
+			Name:                         "without fieldName in sourceSymbol and targetSymbol",
+			SourceType:                   "bool",
+			TargetType:                   "*bool",
+			TargetSymbolWithoutFieldName: true,
+			SourceSymbolWithoutFieldName: true,
+			ExpectedCanConvert:           true,
+			ExpectedCode:                 []string{"target = &source"},
+		},
+		// ---
 	}
 
 	for _, tc := range cases {
@@ -62,13 +105,81 @@ func Test_pointerToTypeConverter(t *testing.T) {
 			ExpectedCanConvert: true,
 			ExpectedCode: []string{
 				`if in.sourceField == nil {`,
-				`	var v bool`,
-				`	out.targetField = v`,
+				`	var zero bool`,
+				`	out.targetField = zero`,
 				`} else {`,
 				`	out.targetField = *in.sourceField`,
 				`}`,
 			},
 		},
+
+		{
+			Name:               "emit trace comments",
+			SourceType:         "*bool",
+			TargetType:         "bool",
+			ConverterOption:    ConverterOption{EmitTraceComments: true},
+			ExpectedCanConvert: true,
+			ExpectedCode: []string{
+				"// built-in pointerToTypeConverter.Assign() generated code start",
+				`if in.sourceField == nil {`,
+				`	var zero bool`,
+				`	out.targetField = zero`,
+				`} else {`,
+				`	out.targetField = *in.sourceField`,
+				`}`,
+				"// built-in pointerToTypeConverter.Assign() generated code end",
+			},
+		},
+
+		{
+			Name:                         "without fieldName in targetSymbol",
+			SourceType:                   "*bool",
+			TargetType:                   "bool",
+			TargetSymbolWithoutFieldName: true,
+			ExpectedCanConvert:           true,
+			ExpectedCode: []string{
+				`if in.sourceField == nil {`,
+				`	var zero bool`,
+				`	target = zero`,
+				`} else {`,
+				`	target = *in.sourceField`,
+				`}`,
+			},
+		},
+
+		{
+			Name:                         "without fieldName in sourceSymbol",
+			SourceType:                   "*bool",
+			TargetType:                   "bool",
+			SourceSymbolWithoutFieldName: true,
+			ExpectedCanConvert:           true,
+			ExpectedCode: []string{
+				`if source == nil {`,
+				`	var zero bool`,
+				`	out.targetField = zero`,
+				`} else {`,
+				`	out.targetField = *source`,
+				`}`,
+			},
+		},
+
+		{
+			Name:                         "without fieldName in targetSymbol and sourceSymbol",
+			SourceType:                   "*bool",
+			TargetType:                   "bool",
+			TargetSymbolWithoutFieldName: true,
+			SourceSymbolWithoutFieldName: true,
+			ExpectedCanConvert:           true,
+			ExpectedCode: []string{
+				`if source == nil {`,
+				`	var zero bool`,
+				`	target = zero`,
+				`} else {`,
+				`	target = *source`,
+				`}`,
+			},
+		},
+		// ---
 	}
 
 	for _, tc := range cases {
@@ -76,6 +187,144 @@ func Test_pointerToTypeConverter(t *testing.T) {
 			t.Parallel()
 
 			converter := &pointerToTypeConverter{}
+			Test.RunConverterTestCase(t, tc, converter)
+		})
+	}
+}
+
+func Test_sliceConverter(t *testing.T) {
+	cases := []ConverterTestCase{
+		{Name: "cannot convert bool to []bool", SourceType: "bool", TargetType: "[]bool"},
+		{Name: "cannot convert []int to int", SourceType: "[]int", TargetType: "int"},
+		{Name: "cannot convert []int to []int32", SourceType: "[]int", TargetType: "[]int32"},
+
+		{
+			Name:               "[]bool to []bool",
+			SourceType:         "[]bool",
+			TargetType:         "[]bool",
+			ExpectedCanConvert: true,
+			ExpectedCode: []string{
+				`if in.sourceField == nil {`,
+				`	out.targetField = nil`,
+				`} else {`,
+				`	out.targetField = make([]bool, len(in.sourceField))`,
+				`	for i, v := range in.sourceField {`,
+				`		var converted bool`,
+				`		converted = v`,
+				`		out.targetField[i] = converted`,
+				`	}`,
+				`}`,
+			},
+		},
+
+		{
+			Name:               "[]string to []*string",
+			SourceType:         "[]string",
+			TargetType:         "[]*string",
+			ExpectedCanConvert: true,
+			ExpectedCode: []string{
+				`if in.sourceField == nil {`,
+				`	out.targetField = nil`,
+				`} else {`,
+				`	out.targetField = make([]*string, len(in.sourceField))`,
+				`	for i, v := range in.sourceField {`,
+				`		var converted *string`,
+				`		converted = &v`,
+				`		out.targetField[i] = converted`,
+				`	}`,
+				`}`,
+			},
+		},
+
+		{
+			Name:               "[]*int to []int",
+			SourceType:         "[]*int",
+			TargetType:         "[]int",
+			ExpectedCanConvert: true,
+			ExpectedCode: []string{
+				`if in.sourceField == nil {`,
+				`	out.targetField = nil`,
+				`} else {`,
+				`	out.targetField = make([]int, len(in.sourceField))`,
+				`	for i, v := range in.sourceField {`,
+				`		var converted int`,
+				`		if v == nil {`,
+				`			var zero int`,
+				`			converted = zero`,
+				`		} else {`,
+				`			converted = *v`,
+				`		}`,
+				`		out.targetField[i] = converted`,
+				`	}`,
+				`}`,
+			},
+		},
+
+		{
+			Name:               "emit trace comments",
+			SourceType:         "[]*int",
+			TargetType:         "[]int",
+			ConverterOption:    ConverterOption{EmitTraceComments: true},
+			ExpectedCanConvert: true,
+			ExpectedCode: []string{
+				`// built-in sliceConverter.Assign() generated code start`,
+				`if in.sourceField == nil {`,
+				`	out.targetField = nil`,
+				`} else {`,
+				`	out.targetField = make([]int, len(in.sourceField))`,
+				`	for i, v := range in.sourceField {`,
+				`		var converted int`,
+				`		// built-in pointerToTypeConverter.Assign() generated code start`,
+				`		if v == nil {`,
+				`			var zero int`,
+				`			converted = zero`,
+				`		} else {`,
+				`			converted = *v`,
+				`		}`,
+				`		// built-in pointerToTypeConverter.Assign() generated code end`,
+				`		out.targetField[i] = converted`,
+				`	}`,
+				`}`,
+				`// built-in sliceConverter.Assign() generated code end`,
+			},
+		},
+
+		{
+			Name:                         "without fieldName in targetSymbol",
+			SourceType:                   "[]*int",
+			TargetType:                   "[]int",
+			TargetSymbolWithoutFieldName: true,
+			ExpectedCanConvert:           true,
+			ExpectedCode: []string{
+				`if in.sourceField == nil {`,
+				`	target = nil`,
+				`} else {`,
+				`	target = make([]int, len(in.sourceField))`,
+				`	for i, v := range in.sourceField {`,
+				`		var converted int`,
+				`		if v == nil {`,
+				`			var zero int`,
+				`			converted = zero`,
+				`		} else {`,
+				`			converted = *v`,
+				`		}`,
+				`		target[i] = converted`,
+				`	}`,
+				`}`,
+			},
+		},
+		// ---
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
+			converter := &sliceConverter{}
+			registerConverter(&identicalTypeConverter{}, 0, true)
+			registerConverter(&typeToPointerConverter{}, 1, true)
+			registerConverter(&pointerToTypeConverter{}, 2, true)
+
 			Test.RunConverterTestCase(t, tc, converter)
 		})
 	}

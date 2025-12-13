@@ -33,11 +33,11 @@ func RunCLI() {
 	slog.Info(util.ColorGreen(appName) + " uses configuration file: " + util.ColorCyan(cff))
 
 	cf, err := gen.ParseConfig(cff)
-	if err != nil {
-		slog.Error(util.ColorRed("failed to load configuration file."))
-		slog.Error(util.ColorRed(err.Error()))
-		os.Exit(1)
-	}
+	//if err != nil {
+	//	slog.Error(util.ColorRed("failed to load configuration file."))
+	//	slog.Error(util.ColorRed(err.Error()))
+	//	os.Exit(1)
+	//}
 
 	//fmt.Println(cf)
 	gen.RegisterAllBuiltinConverters()

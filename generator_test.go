@@ -14,12 +14,12 @@ func Test_mapFields(t *testing.T) {
 		name     string
 		target   []string
 		source   []string
-		match    FieldNameMatch
+		match    NameMatch
 		expected map[string]string
 	}{
 		{
 			name:  "number of fields are the same, match ignored case",
-			match: FieldNameMatchIgnoreCase,
+			match: NameMatchIgnoreCase,
 			target: []string{
 				`Id int`,
 				`fieldName string`,
@@ -36,7 +36,7 @@ func Test_mapFields(t *testing.T) {
 
 		{
 			name:  "number of fields are the same, match exact",
-			match: FieldNameMatchExact,
+			match: NameMatchExact,
 			target: []string{
 				`fieldName string`,
 				`Id int`,
@@ -92,9 +92,10 @@ func Test_mapFields(t *testing.T) {
 			}
 
 			RegisterAllBuiltinConverters()
-		
-			pkg, config := Test.SetupGoldenTestCase(t, gtc)
-			require.Equal(t, 1, len(config.Structs))
+
+			pkg, configs := Test.SetupGoldenTestCase(t, gtc)
+			require.Equal(t, 1, len(configs))
+			require.Equal(t, 1, len(configs[0].Structs))
 
 			targetStruct := parse.Struct(pkg, "Target")
 			sourceStruct := parse.Struct(pkg, "Source")

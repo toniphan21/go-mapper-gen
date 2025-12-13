@@ -27,4 +27,12 @@ func (u *typeUtil) IsInterface(t types.Type) bool {
 	return ok
 }
 
+func (u *typeUtil) IsSlice(t types.Type) (types.Type, bool) {
+	s, ok := t.Underlying().(*types.Slice)
+	if !ok {
+		return nil, false
+	}
+	return s.Elem(), true
+}
+
 var TypeUtil = &typeUtil{}

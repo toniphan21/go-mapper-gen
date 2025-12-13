@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/toniphan21/go-mapper-gen/internal/parse"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -18,22 +17,22 @@ func MakeJenFile(currentPkg *packages.Package, config Config) *jen.File {
 
 func Generate(file *jen.File, currentPkg *packages.Package, config Config) error {
 	fmt.Println("Generating...")
-	for _, cf := range config.Structs {
-		targetStruct := parse.Struct(currentPkg, cf.TargetStructName)
-		sourceStruct := parse.Struct(currentPkg, cf.SourceStructName)
-
-		//targetStructType := parse.StructType(currentPkg, cf.TargetStructName)
-		//sourceStructType := parse.StructType(currentPkg, cf.SourceStructName)
-		targetFields := parse.StructFields(currentPkg, targetStruct)
-		sourceFields := parse.StructFields(currentPkg, sourceStruct)
-
-		fmt.Println(targetFields)
-		fmt.Println(sourceFields)
-	}
+	//for _, cf := range config.Structs {
+	//	targetStruct := parse.Struct(currentPkg, cf.TargetStructName)
+	//	sourceStruct := parse.Struct(currentPkg, cf.SourceStructName)
+	//
+	//	//targetStructType := parse.StructType(currentPkg, cf.TargetStructName)
+	//	//sourceStructType := parse.StructType(currentPkg, cf.SourceStructName)
+	//	targetFields := parse.StructFields(currentPkg, targetStruct)
+	//	sourceFields := parse.StructFields(currentPkg, sourceStruct)
+	//
+	//	fmt.Println(targetFields)
+	//	fmt.Println(sourceFields)
+	//}
 	return nil
 }
 
-func mapFields(targetFields, sourceFields map[string]types.Type, match FieldNameMatch) map[string]string {
+func mapFields(targetFields, sourceFields map[string]types.Type, match NameMatch) map[string]string {
 	fmt.Println(targetFields)
 	fmt.Println(sourceFields)
 	return nil

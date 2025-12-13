@@ -22,11 +22,31 @@ type Config struct {
 	ImplementationName     string
 	ConstructorName        string
 	DecoratorInterfaceName string
-	Structs                []Struct
+	Structs                []StructConfig
 	GenerateGoDoc          bool
+	ConvertFunctions       []ConvertFunctionConfig
 }
 
-type Struct struct {
+type FieldConfig struct {
+	NameMatch NameMatch
+	ManualMap map[string]string
+}
+
+type TypeConfig struct {
+	PackagePath string
+	TypeName    string
+	IsPointer   bool
+}
+
+type ConvertFunctionConfig struct {
+	Target      TypeConfig
+	Source      TypeConfig
+	PackagePath string
+	FuncName    string
+	VarName     *string
+}
+
+type StructConfig struct {
 	TargetPkgPath    string
 	TargetStructName string
 	SourcePkgPath    string
@@ -36,8 +56,8 @@ type Struct struct {
 	SourceFromTargetFuncName string
 	DecorateFuncName         string
 
-	Pointer        Pointer
-	FieldNameMatch FieldNameMatch
+	Pointer Pointer
+	Fields  FieldConfig
 
 	GenerateSourceToTarget   bool
 	GenerateSourceFromTarget bool
@@ -52,11 +72,11 @@ const (
 	PointerBoth
 )
 
-type FieldNameMatch int
+type NameMatch int
 
 const (
-	FieldNameMatchIgnoreCase FieldNameMatch = iota
-	FieldNameMatchExact
+	NameMatchIgnoreCase NameMatch = iota
+	NameMatchExact
 )
 
 type defaultCfValue struct {
@@ -103,7 +123,7 @@ var Default = defaultCfValue{
 	TargetPkgPath:            Placeholder.CurrentPackage,
 }
 
-func ParseConfig(path string) (map[string]Config, error) {
+func ParseConfig(path string) (map[string][]Config, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, err
 	}
@@ -122,49 +142,60 @@ func ParseConfig(path string) (map[string]Config, error) {
 
 type configMapper struct{}
 
-func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all config.Base) (map[string]Config, error) {
-	var result = make(map[string]Config)
+func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all config.Base) (map[string][]Config, error) {
+	var result = make(map[string][]Config)
 	if packages == nil {
 		return result, nil
 	}
 
-	for path, pkg := range packages {
-		if len(pkg.GetStructs()) == 0 {
+	var pkgCfs []Config
+
+	for path, mapper := range packages {
+		pkgCf := m.mapMapper(mapper, all)
+		if pkgCf == nil {
 			continue
 		}
-
-		pkgCf := Config{
-			Output:                 m.mergeOutput(all.GetOutput(), pkg.GetOutput()),
-			InterfaceName:          pkg.GetInterfaceName(),
-			ImplementationName:     pkg.GetImplementationName(),
-			ConstructorName:        pkg.GetConstructorName(),
-			DecoratorInterfaceName: pkg.GetDecoratorInterfaceName(),
-			GenerateGoDoc:          pkg.GetGenerateGoDoc(),
-		}
-
-		var structs []Struct
-		for targetStructName, v := range pkg.GetStructs() {
-			structCf := Struct{
-				TargetPkgPath:            m.mergeValue(v.TargetPkg, pkg.GetTargetPkg()),
-				TargetStructName:         targetStructName,
-				SourcePkgPath:            m.mergeValue(v.SourcePkg, pkg.GetSourcePkg()),
-				SourceStructName:         m.mergeValue(v.SourceStructName, targetStructName),
-				SourceToTargetFuncName:   m.mergeValue(v.SourceToTargetFunctionName, pkg.GetSourceToTargetFunctionName()),
-				SourceFromTargetFuncName: m.mergeValue(v.SourceFromTargetFunctionName, pkg.GetSourceFromTargetFunctionName()),
-				DecorateFuncName:         m.mergeValue(v.DecorateFunctionName, pkg.GetDecorateFunctionName()),
-				Pointer:                  m.mapPointer(v.Pointer),
-				FieldNameMatch:           m.mapFieldNameMatch(v.FieldNameMatch),
-				GenerateSourceToTarget:   v.GenerateSourceToTarget,
-				GenerateSourceFromTarget: v.GenerateSourceFromTarget,
-			}
-
-			structs = append(structs, structCf)
-		}
-
-		pkgCf.Structs = structs
-		result[path] = pkgCf
+		pkgCfs = append(pkgCfs, *pkgCf)
+		result[path] = pkgCfs
 	}
 	return result, nil
+}
+
+func (m *configMapper) mapMapper(pkg config.Mapper, all config.Base) *Config {
+	if len(pkg.GetStructs()) == 0 {
+		return nil
+	}
+
+	pkgCf := Config{
+		Output:                 m.mergeOutput(all.GetOutput(), pkg.GetOutput()),
+		InterfaceName:          pkg.GetInterfaceName(),
+		ImplementationName:     pkg.GetImplementationName(),
+		ConstructorName:        pkg.GetConstructorName(),
+		DecoratorInterfaceName: pkg.GetDecoratorInterfaceName(),
+		GenerateGoDoc:          pkg.GetGenerateGoDoc(),
+	}
+
+	var structs []StructConfig
+	for targetStructName, v := range pkg.GetStructs() {
+		structCf := StructConfig{
+			TargetPkgPath:            m.mergeValue(v.TargetPkg, pkg.GetTargetPkg()),
+			TargetStructName:         targetStructName,
+			SourcePkgPath:            m.mergeValue(v.SourcePkg, pkg.GetSourcePkg()),
+			SourceStructName:         m.mergeValue(v.SourceStructName, targetStructName),
+			SourceToTargetFuncName:   m.mergeValue(v.SourceToTargetFunctionName, pkg.GetSourceToTargetFunctionName()),
+			SourceFromTargetFuncName: m.mergeValue(v.SourceFromTargetFunctionName, pkg.GetSourceFromTargetFunctionName()),
+			DecorateFuncName:         m.mergeValue(v.DecorateFunctionName, pkg.GetDecorateFunctionName()),
+			Pointer:                  m.mapPointer(v.Pointer),
+			Fields:                   m.mapFieldConfig(v.Fields),
+			GenerateSourceToTarget:   v.GenerateSourceToTarget,
+			GenerateSourceFromTarget: v.GenerateSourceFromTarget,
+		}
+
+		structs = append(structs, structCf)
+	}
+
+	pkgCf.Structs = structs
+	return &pkgCf
 }
 
 func (m *configMapper) mapPointer(val string) Pointer {
@@ -182,14 +213,14 @@ func (m *configMapper) mapPointer(val string) Pointer {
 	}
 }
 
-func (m *configMapper) mapFieldNameMatch(val string) FieldNameMatch {
+func (m *configMapper) mapNameMatch(val string) NameMatch {
 	switch val {
 	case "ignore-case":
-		return FieldNameMatchIgnoreCase
+		return NameMatchIgnoreCase
 	case "exact":
-		return FieldNameMatchExact
+		return NameMatchExact
 	default:
-		return FieldNameMatchIgnoreCase
+		return NameMatchIgnoreCase
 	}
 }
 
@@ -220,4 +251,18 @@ func (m *configMapper) mergeOutput(outputs ...*config.Output) Output {
 		}
 	}
 	return *output
+}
+
+func (m *configMapper) mapFieldConfig(in config.Fields) FieldConfig {
+	var manualMap map[string]string
+	if in.Map != nil {
+		manualMap = make(map[string]string)
+		for k, v := range *in.Map {
+			manualMap[k] = v
+		}
+	}
+	return FieldConfig{
+		NameMatch: m.mapNameMatch(in.Match),
+		ManualMap: manualMap,
+	}
 }

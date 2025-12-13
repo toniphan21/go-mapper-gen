@@ -16,7 +16,7 @@ type MapperStruct struct {
 
 	Pointer string `pkl:"pointer"`
 
-	FieldNameMatch string `pkl:"field_name_match"`
+	Fields Fields `pkl:"fields"`
 
 	GenerateSourceToTarget bool `pkl:"generate_source_to_target"`
 

@@ -42,7 +42,9 @@ func TestGolden(t *testing.T) {
 			Package:            c.pkgPath,
 			SourceFileContents: sourceFiles,
 			PklFileContent:     file.ContentFromTestData(c.pklFile),
-			GoldenFileContent:  file.ContentFromTestData(c.goldenFile),
+			GoldenFileContent: map[string][]byte{
+				Default.Output.FileName: file.ContentFromTestData(c.goldenFile),
+			},
 		}
 
 		tcs = append(tcs, tc)
