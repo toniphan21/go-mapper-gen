@@ -58,6 +58,7 @@ type expectedConfig struct {
 }
 
 type expectedStruct struct {
+	MapperName               *string
 	TargetPkgPath            *string
 	TargetStructName         string
 	SourcePkgPath            string
@@ -126,10 +127,14 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) Config {
 			item.TargetPkgPath = *v.TargetPkgPath
 		}
 
+		item.MapperName = v.TargetStructName
 		item.TargetStructName = v.TargetStructName
 		item.SourcePkgPath = v.SourcePkgPath
 		item.SourceStructName = v.SourceStructName
 
+		if v.MapperName != nil {
+			item.MapperName = *v.MapperName
+		}
 		if v.SourceToTargetFuncName != nil {
 			item.SourceToTargetFuncName = *v.SourceToTargetFuncName
 		}

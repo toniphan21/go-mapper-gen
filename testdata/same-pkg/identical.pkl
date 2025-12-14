@@ -4,6 +4,69 @@ packages {
 
     structs {
       ["IdenticalTarget"] { source_struct_name = "IdenticalSource" }
+
+      // Test some configuration options:
+      //   - pointer
+      //   - target_struct_name
+      //   - source_to_target_function_name
+      //   - source_from_target_function_name
+      //   - generate_source_to_target
+      //   - generate_source_from_target
+      //
+      // `_ 0: Target -> Source` is the name of the mapper.
+      // Mapper names are sorted in ascending order to determine the overall
+      // generation order. Within each mapper, `To...` function are always
+      // generated before `From...` function.
+      //
+      // By default, the mapper name is the target struct name, but it can be
+      // overridden by explicitly setting `target_struct_name`. This allows
+      // generating multiple mappers for the same target/source structs with
+      // different mapping functions.
+      ["_ 0: Source -> Target"] {
+        target_struct_name = "Target"
+        source_struct_name = "Source"
+        source_to_target_function_name = "ToTargetWithPointerNone"
+        source_from_target_function_name = "FromTargetWithPointerNone"
+        pointer = "none"
+      }
+
+      ["_ 1: *Source -> Target"] {
+        target_struct_name = "Target"
+        source_struct_name = "Source"
+        source_to_target_function_name = "ToTargetWithPointerTargetOnly"
+        source_from_target_function_name = "FromTargetWithPointerTargetOnly"
+        pointer = "target-only"
+      }
+
+      ["_ 2: Source -> *Target"] {
+        target_struct_name = "Target"
+        source_struct_name = "Source"
+        source_to_target_function_name = "ToTargetWithPointerSourceOnly"
+        source_from_target_function_name = "FromTargetWithPointerSourceOnly"
+        pointer = "source-only"
+      }
+
+      ["_ 3: *Source -> *Target"] {
+        target_struct_name = "Target"
+        source_struct_name = "Source"
+        source_to_target_function_name = "ToTargetWithPointerBoth"
+        source_from_target_function_name = "FromTargetWithPointerBoth"
+        pointer = "both"
+      }
+
+      ["_ 4: Source -> Target without From"] {
+        target_struct_name = "Target"
+        source_struct_name = "Source"
+        source_to_target_function_name = "ToTargetWithoutFrom"
+        generate_source_from_target = false
+      }
+
+      ["_ 5: Source -> Target without To"] {
+        target_struct_name = "Target"
+        source_struct_name = "Source"
+        source_from_target_function_name = "FromTargetWithoutTo"
+        generate_source_to_target = false
+      }
     }
   }
 }

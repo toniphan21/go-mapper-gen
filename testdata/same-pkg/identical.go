@@ -53,3 +53,11 @@ type IdenticalSource struct {
 	PointerString  *string
 	PointerTime    *time.Time
 }
+
+type Target struct {
+	ID int
+}
+
+type Source struct {
+	ID int
+}

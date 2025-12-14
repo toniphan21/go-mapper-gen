@@ -116,20 +116,22 @@ func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
 
 	RegisterAllBuiltinConverters()
 
-	output := make(map[string]string)
-	expected := make(map[string]string)
-	for _, config := range configs {
-		jf := MakeJenFile(pkg, config)
-		err := Generate(jf, pkg, []Config{config})
-		require.NoError(t, err, "cannot generate failed")
+	outputs := make(map[string]string)
+	fm := DefaultFileManager()
 
-		generated := jf.GoString()
-		output[config.Output.FileName] = generated
-		for k, v := range tc.GoldenFileContent {
-			expected[k] = string(v)
-		}
+	err := Generate(pkg, configs, fm)
+	require.NoError(t, err, "cannot generate failed")
+
+	for fileName, jf := range fm.JenFiles() {
+		outputs[fileName] = jf.GoString()
 	}
-	assert.Equal(t, expected, output, "generated file does not match golden file")
+	for fileName, expected := range tc.GoldenFileContent {
+		output, have := outputs[fileName]
+		if !have {
+			assert.Failf(t, "expected file %v not found in outputs", fileName)
+		}
+		assert.Equal(t, string(expected), output, "generated file content %v does not match golden file", fileName)
+	}
 }
 
 func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, converter Converter) {

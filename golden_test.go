@@ -27,31 +27,25 @@ func TestGolden(t *testing.T) {
 		// ---
 	}
 
-	var tcs []GoldenTestCase
 	for _, c := range cases {
-		sourceFiles := make(map[string][]byte)
-		for k, v := range c.sourceFiles {
-			sourceFiles[k] = file.ContentFromTestData(v)
-		}
+		t.Run(c.name, func(t *testing.T) {
+			sourceFiles := make(map[string][]byte)
+			for k, v := range c.sourceFiles {
+				sourceFiles[k] = file.ContentFromTestData(v)
+			}
 
-		tc := GoldenTestCase{
-			Name:               c.name,
-			GoModGoVersion:     c.goModGoVersion,
-			GoModRequires:      c.goModRequires,
-			GoModModule:        c.goModModule,
-			Package:            c.pkgPath,
-			SourceFileContents: sourceFiles,
-			PklFileContent:     file.ContentFromTestData(c.pklFile),
-			GoldenFileContent: map[string][]byte{
-				Default.Output.FileName: file.ContentFromTestData(c.goldenFile),
-			},
-		}
-
-		tcs = append(tcs, tc)
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.Name, func(t *testing.T) {
+			tc := GoldenTestCase{
+				Name:               c.name,
+				GoModGoVersion:     c.goModGoVersion,
+				GoModRequires:      c.goModRequires,
+				GoModModule:        c.goModModule,
+				Package:            c.pkgPath,
+				SourceFileContents: sourceFiles,
+				PklFileContent:     file.ContentFromTestData(c.pklFile),
+				GoldenFileContent: map[string][]byte{
+					Default.Output.FileName: file.ContentFromTestData(c.goldenFile),
+				},
+			}
 			Test.RunGoldenTestCase(t, tc)
 		})
 	}

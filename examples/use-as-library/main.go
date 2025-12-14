@@ -12,5 +12,5 @@ func main() {
 	gomappergen.RegisterAllBuiltinConverters()
 
 	var configs []gomappergen.Config
-	_ = gomappergen.Generate(nil, nil, configs)
+	_ = gomappergen.Generate(nil, configs, gomappergen.DefaultFileManager())
 }

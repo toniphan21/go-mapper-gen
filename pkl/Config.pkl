@@ -42,8 +42,9 @@ class Fields {
 
 class MapperStruct {
   target_pkg: String?
-  source_struct_name: String?
+  target_struct_name: String?
   source_pkg: String?
+  source_struct_name: String?
   source_to_target_function_name: String?
   source_from_target_function_name: String?
   decorate_function_name: String?

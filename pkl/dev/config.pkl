@@ -34,8 +34,8 @@ packages {
   }
 
   ["github.com/toniphan21/plural"] {
-    mappers {
-      new {
+    priorities {
+      [0] {
         source_pkg = "{CurrentPackage}"
 
         structs {
@@ -43,11 +43,18 @@ packages {
         }
       }
 
-      new {
+      [1] {
         source_pkg = "{CurrentPackage}"
 
         structs {
-          ["LoginParams"] { source_struct_name = "Login" }
+          ["LoginParams"] {
+            target_struct_name = "LoginParams"
+            source_struct_name = "Login"
+            source_to_target_function_name = ""
+            source_from_target_function_name = ""
+            pointer = "none"
+            generate_source_to_target = true
+          }
         }
       }
     }
@@ -68,7 +75,6 @@ packages {
           }
         }
       }
-
 
     }
   }

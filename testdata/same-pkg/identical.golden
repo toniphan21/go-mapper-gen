@@ -1,1 +1,27 @@
 package domain
+
+type iMapper interface {
+	ToIdenticalTarget(in IdenticalSource) IdenticalTarget
+
+	FromIdenticalTarget(in IdenticalTarget) IdenticalSource
+
+	ToTargetWithPointerNone(in Source) Target
+
+	FromTargetWithPointerNone(in Target) Source
+
+	ToTargetWithPointerTargetOnly(in Source) *Target
+
+	FromTargetWithPointerTargetOnly(in *Target) Source
+
+	ToTargetWithPointerSourceOnly(in *Source) Target
+
+	FromTargetWithPointerSourceOnly(in Target) *Source
+
+	ToTargetWithPointerBoth(in *Source) *Target
+
+	FromTargetWithPointerBoth(in *Target) *Source
+
+	ToTargetWithoutFrom(in Source) Target
+
+	FromTargetWithoutTo(in Target) Source
+}

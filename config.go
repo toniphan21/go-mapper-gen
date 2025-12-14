@@ -58,6 +58,7 @@ type ConvertFunctionConfig struct {
 }
 
 type StructConfig struct {
+	MapperName       string
 	TargetPkgPath    string
 	TargetStructName string
 	SourcePkgPath    string
@@ -187,8 +188,13 @@ func (m *configMapper) mapMapper(pkg config.Mapper, all config.Base) *Config {
 	}
 
 	var structs []StructConfig
-	for targetStructName, v := range pkg.GetStructs() {
+	for mapperName, v := range pkg.GetStructs() {
+		targetStructName := mapperName
+		if v.TargetStructName != nil {
+			targetStructName = *v.TargetStructName
+		}
 		structCf := StructConfig{
+			MapperName:               mapperName,
 			TargetPkgPath:            m.mergeValue(v.TargetPkg, pkg.GetTargetPkg()),
 			TargetStructName:         targetStructName,
 			SourcePkgPath:            m.mergeValue(v.SourcePkg, pkg.GetSourcePkg()),

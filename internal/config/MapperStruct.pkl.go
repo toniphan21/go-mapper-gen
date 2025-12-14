@@ -4,9 +4,11 @@ package config
 type MapperStruct struct {
 	TargetPkg *string `pkl:"target_pkg"`
 
-	SourceStructName *string `pkl:"source_struct_name"`
+	TargetStructName *string `pkl:"target_struct_name"`
 
 	SourcePkg *string `pkl:"source_pkg"`
+
+	SourceStructName *string `pkl:"source_struct_name"`
 
 	SourceToTargetFunctionName *string `pkl:"source_to_target_function_name"`
 

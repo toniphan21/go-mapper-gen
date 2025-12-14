@@ -46,6 +46,6 @@ func RunCLI() {
 	gen.PrintRegisteredConverters(logger)
 
 	for _, configs := range cf {
-		_ = gen.Generate(nil, nil, configs)
+		_ = gen.Generate(nil, configs, gen.DefaultFileManager())
 	}
 }

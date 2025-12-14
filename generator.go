@@ -1,8 +1,8 @@
 package gomappergen
 
 import (
-	"fmt"
 	"go/types"
+	"slices"
 	"strings"
 
 	"github.com/dave/jennifer/jen"
@@ -10,16 +10,13 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func MakeJenFile(currentPkg *packages.Package, config Config) *jen.File {
-	pkgName := replacePlaceholders(config.Output.PkgName, map[string]string{
-		Placeholder.CurrentPackageName: currentPkg.Name,
-	})
-
-	return jen.NewFilePathName(currentPkg.PkgPath, pkgName)
-}
-
-func Generate(file *jen.File, currentPkg *packages.Package, configs []Config) error {
+func Generate(currentPkg *packages.Package, configs []Config, fileManager FileManager) error {
 	for _, cf := range configs {
+		file := fileManager.MakeJenFile(currentPkg, cf)
+		if file == nil {
+			continue
+		}
+
 		if err := generateMapper(file, currentPkg, cf); err != nil {
 			return err
 		}
@@ -34,6 +31,7 @@ type convertibleField struct {
 }
 
 type genMapFunc struct {
+	name               string
 	funcName           string
 	decorateFuncName   string
 	targetParamName    string
@@ -48,8 +46,48 @@ type genMapFunc struct {
 }
 
 func generateMapper(file *jen.File, currentPkg *packages.Package, config Config) error {
-	fmt.Println("Generating...")
+	mapFuncs, err := collectMapFuncs(currentPkg, config)
+	if err != nil {
+		return err
+	}
 
+	if len(mapFuncs) == 0 {
+		return nil
+	}
+
+	slices.SortFunc(mapFuncs, func(a, b genMapFunc) int {
+		return strings.Compare(a.name, b.name)
+	})
+
+	generateMapperInterface(file, config.InterfaceName, mapFuncs)
+
+	return nil
+}
+
+func generateMapperInterface(file *jen.File, name string, mapFuncs []genMapFunc) {
+	var signatures = jen.Line()
+
+	for _, mf := range mapFuncs {
+		var p, r []jen.Code
+
+		if mf.sourcePointer {
+			p = append(p, jen.Id(mf.sourceParamName).Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
+		} else {
+			p = append(p, jen.Id(mf.sourceParamName).Add(GeneratorUtil.TypeToJenCode(mf.sourceType)))
+		}
+
+		if mf.targetPointer {
+			r = append(r, jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+		} else {
+			r = append(r, jen.Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+		}
+		signatures = signatures.Id(mf.funcName).Params(p...).Params(r...).Line().Line()
+	}
+
+	file.Type().Id(name).Interface(signatures).Line()
+}
+
+func collectMapFuncs(currentPkg *packages.Package, config Config) ([]genMapFunc, error) {
 	var mapFuncs []genMapFunc
 	for _, cf := range config.Structs {
 		var vars = map[string]string{
@@ -89,6 +127,7 @@ func generateMapper(file *jen.File, currentPkg *packages.Package, config Config)
 			decorateToTargetFuncName := replacePlaceholders(cf.DecorateFuncName, tv)
 
 			mapFunc := genMapFunc{
+				name:             cf.MapperName + "-SourceToTarget",
 				funcName:         toTargetFuncName,
 				decorateFuncName: decorateToTargetFuncName,
 				targetParamName:  "out",
@@ -111,6 +150,7 @@ func generateMapper(file *jen.File, currentPkg *packages.Package, config Config)
 			decorateFromTargetFuncName := replacePlaceholders(cf.DecorateFuncName, fv)
 
 			mapFunc := genMapFunc{
+				name:             cf.MapperName + "-TargetToSource",
 				funcName:         fromTargetFuncName,
 				decorateFuncName: decorateFromTargetFuncName,
 				targetParamName:  "out",
@@ -125,7 +165,7 @@ func generateMapper(file *jen.File, currentPkg *packages.Package, config Config)
 			mapFuncs = append(mapFuncs, mapFunc)
 		}
 	}
-	return nil
+	return mapFuncs, nil
 }
 
 func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]types.Type, config FieldConfig) {
