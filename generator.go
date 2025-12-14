@@ -1,6 +1,7 @@
 package gomappergen
 
 import (
+	"fmt"
 	"go/types"
 	"slices"
 	"strings"
@@ -25,6 +26,7 @@ func Generate(currentPkg *packages.Package, configs []Config, fileManager FileMa
 }
 
 type convertibleField struct {
+	sortedName   string
 	targetSymbol Symbol
 	sourceSymbol Symbol
 	converter    Converter
@@ -45,6 +47,24 @@ type genMapFunc struct {
 	unconvertibleField []string
 }
 
+func (mf *genMapFunc) paramsAndResults() ([]jen.Code, []jen.Code) {
+	var params, result []jen.Code
+
+	if mf.sourcePointer {
+		params = append(params, jen.Id(mf.sourceParamName).Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
+	} else {
+		params = append(params, jen.Id(mf.sourceParamName).Add(GeneratorUtil.TypeToJenCode(mf.sourceType)))
+	}
+
+	if mf.targetPointer {
+		result = append(result, jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+	} else {
+		result = append(result, jen.Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+	}
+
+	return params, result
+}
+
 func generateMapper(file *jen.File, currentPkg *packages.Package, config Config) error {
 	mapFuncs, err := collectMapFuncs(currentPkg, config)
 	if err != nil {
@@ -59,32 +79,80 @@ func generateMapper(file *jen.File, currentPkg *packages.Package, config Config)
 		return strings.Compare(a.name, b.name)
 	})
 
-	generateMapperInterface(file, config.InterfaceName, mapFuncs)
+	generateMapperInterface(file, config.InterfaceName, mapFuncs, config)
+	generateMapperImplementation(file, config.ImplementationName, mapFuncs, config)
+	generateCompileTimeCheck(file, config.InterfaceName, config.ImplementationName)
 
 	return nil
 }
 
-func generateMapperInterface(file *jen.File, name string, mapFuncs []genMapFunc) {
-	var signatures = jen.Line()
+func generateMapperInterface(file *jen.File, name string, mapFuncs []genMapFunc, config Config) {
+	var signatures []jen.Code
 
 	for _, mf := range mapFuncs {
-		var p, r []jen.Code
+		params, results := mf.paramsAndResults()
 
-		if mf.sourcePointer {
-			p = append(p, jen.Id(mf.sourceParamName).Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
-		} else {
-			p = append(p, jen.Id(mf.sourceParamName).Add(GeneratorUtil.TypeToJenCode(mf.sourceType)))
+		if config.GenerateGoDoc {
+			comment := fmt.Sprintf(
+				"%v converts a %v value into a %v value.",
+				mf.funcName,
+				GeneratorUtil.SimpleName(mf.sourceType),
+				GeneratorUtil.SimpleName(mf.targetType),
+			)
+
+			signatures = append(signatures, GeneratorUtil.WrapComment(comment))
+		}
+		signatures = append(signatures, jen.Id(mf.funcName).Params(params...).Params(results...).Line())
+	}
+
+	file.Type().Id(name).Interface(signatures...).Line().Line()
+}
+
+func generateMapperImplementation(file *jen.File, name string, mapFuncs []genMapFunc, config Config) {
+	file.Type().Id(name).Struct().Line()
+
+	for _, mf := range mapFuncs {
+		params, results := mf.paramsAndResults()
+
+		var varCount = 0
+		var body []jen.Code
+		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetType)).Line())
+
+		for _, field := range mf.mappedFields {
+			opt := ConverterOption{}
+
+			before, nextVarCount := field.converter.Before(file, field.targetSymbol, field.sourceSymbol, varCount, opt)
+			if before != nil {
+				body = append(body, before)
+				varCount = nextVarCount
+			}
+
+			assign := field.converter.Assign(file, field.targetSymbol, field.sourceSymbol, opt)
+			if assign != nil {
+				body = append(body, assign)
+			}
 		}
 
 		if mf.targetPointer {
-			r = append(r, jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+			body = append(body, jen.Line().Return(jen.Op("&").Id(mf.targetParamName)))
 		} else {
-			r = append(r, jen.Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+			body = append(body, jen.Line().Return(jen.Id(mf.targetParamName)))
 		}
-		signatures = signatures.Id(mf.funcName).Params(p...).Params(r...).Line().Line()
-	}
 
-	file.Type().Id(name).Interface(signatures).Line()
+		file.Func().
+			Params(jen.Id("m").Op("*").Id(name)).
+			Id(mf.funcName).
+			Params(params...).
+			Params(results...).
+			Block(body...).
+			Line()
+	}
+}
+
+func generateCompileTimeCheck(file *jen.File, interfaceName, implName string) {
+	file.Var().Id("_").Id(interfaceName).Op("=").Parens(jen.Op("*").Id(implName)).Parens(jen.Nil())
+
+	return
 }
 
 func collectMapFuncs(currentPkg *packages.Package, config Config) ([]genMapFunc, error) {
@@ -192,11 +260,16 @@ func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]type
 		}
 
 		mapFunc.mappedFields = append(mapFunc.mappedFields, convertibleField{
+			sortedName:   target,
 			targetSymbol: newSymbol("out", target, tt),
 			sourceSymbol: newSymbol("in", source, st),
 			converter:    converter,
 		})
 	}
+
+	slices.SortFunc(mapFunc.mappedFields, func(a, b convertibleField) int {
+		return strings.Compare(a.sortedName, b.sortedName)
+	})
 }
 
 func mapFieldNames(targetFields, sourceFields map[string]types.Type, config FieldConfig) map[string]string {

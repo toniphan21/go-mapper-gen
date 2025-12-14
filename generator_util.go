@@ -3,9 +3,13 @@ package gomappergen
 import (
 	"fmt"
 	"go/types"
+	"strconv"
+	"strings"
 
 	"github.com/dave/jennifer/jen"
 )
+
+const CommentWidth = 80
 
 type genUtil struct {
 }
@@ -93,6 +97,76 @@ func (g *genUtil) funcGroupFromTuple(t *types.Tuple) []jen.Code {
 		}
 	}
 	return res
+}
+
+func (g *genUtil) SimpleName(t types.Type) string {
+	switch tt := t.(type) {
+	case *types.Named:
+		return tt.Obj().Name()
+	case *types.Basic:
+		return tt.Name()
+	case *types.Pointer:
+		return g.SimpleName(tt.Elem())
+	case *types.Slice:
+		return "[]" + g.SimpleName(tt.Elem())
+	case *types.Array:
+		return "[" + strconv.FormatInt(tt.Len(), 10) + "]" + g.SimpleName(tt.Elem())
+	case *types.Map:
+		return "map[" + g.SimpleName(tt.Key()) + "]" + g.SimpleName(tt.Elem())
+	case *types.Chan:
+		return "chan " + g.SimpleName(tt.Elem())
+	case *types.Interface:
+		return "interface{}"
+	case *types.Signature:
+		return "func"
+	default:
+		return t.String()
+	}
+}
+
+func (g *genUtil) WrapComment(comment string) jen.Code {
+	lines := g.WrapText(comment, CommentWidth)
+	l := len(lines)
+	if l == 1 {
+		return jen.Comment(lines[0])
+	}
+
+	var code = jen.Add()
+	for i, line := range lines {
+		code = code.Add(jen.Comment(line))
+		if i != l-1 {
+			code = code.Line()
+		}
+	}
+	return code
+}
+
+func (g *genUtil) WrapText(s string, width int) []string {
+	var lines []string
+	words := strings.Fields(s)
+
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	var current string
+	for _, word := range words {
+		if len(current)+len(word)+1 > width {
+			lines = append(lines, strings.TrimSpace(current))
+			current = word
+		} else {
+			if current == "" {
+				current = word
+			} else {
+				current += " " + word
+			}
+		}
+	}
+	if current != "" {
+		lines = append(lines, current)
+	}
+
+	return lines
 }
 
 var GeneratorUtil = &genUtil{}

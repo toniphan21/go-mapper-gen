@@ -18,11 +18,11 @@ func TestGolden(t *testing.T) {
 		goldenFile     string
 	}{
 		{
-			name:        "same-pkg: identical",
+			name:        "same-pkg: basic configurations",
 			pkgPath:     "github.com/toniphan21/go-mapper-gen/golden",
-			sourceFiles: map[string]string{"code.go": "same-pkg/identical.go"},
-			pklFile:     "same-pkg/identical.pkl",
-			goldenFile:  "same-pkg/identical.golden",
+			sourceFiles: map[string]string{"code.go": "same-pkg/basic.go"},
+			pklFile:     "same-pkg/basic.pkl",
+			goldenFile:  "same-pkg/basic.golden.go",
 		},
 		// ---
 	}

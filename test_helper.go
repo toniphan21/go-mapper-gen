@@ -26,6 +26,7 @@ type GoldenTestCase struct {
 	SourceFileContents map[string][]byte
 	PklFileContent     []byte
 	GoldenFileContent  map[string][]byte
+	PrintActual        bool
 }
 
 type ConverterTestCase struct {
@@ -129,6 +130,10 @@ func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
 		output, have := outputs[fileName]
 		if !have {
 			assert.Failf(t, "expected file %v not found in outputs", fileName)
+		}
+		if tc.PrintActual {
+			fmt.Println("file: ", fileName)
+			fmt.Println(output)
 		}
 		assert.Equal(t, string(expected), output, "generated file content %v does not match golden file", fileName)
 	}

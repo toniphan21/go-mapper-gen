@@ -1,5 +1,7 @@
 packages {
   ["github.com/toniphan21/go-mapper-gen/golden"] {
+    interface_name = "iMapperIdentical"
+    implementation_name = "iMapperIdenticalImpl"
     source_pkg = "{CurrentPackage}"
 
     structs {
