@@ -248,7 +248,7 @@ func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]type
 		if !ok {
 			continue
 		}
-		st, ok := sourceFields[target]
+		st, ok := sourceFields[source]
 		if !ok {
 			continue
 		}

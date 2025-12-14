@@ -5,6 +5,7 @@ package gomappergen
 import (
 	"context"
 	"os"
+	"sort"
 
 	"github.com/apple/pkl-go/pkl"
 	"github.com/toniphan21/go-mapper-gen/internal/config"
@@ -163,45 +164,66 @@ func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all 
 	var pkgCfs []Config
 
 	for path, mapper := range packages {
-		pkgCf := m.mapMapper(mapper, all)
-		if pkgCf == nil {
+		if mapper.GetPriorities() != nil {
+			priorities := *mapper.GetPriorities()
+			var priorityKeys []int
+			for i := range priorities {
+				priorityKeys = append(priorityKeys, i)
+			}
+			sort.Ints(priorityKeys)
+
+			for _, i := range priorityKeys {
+				ci, ok := priorities[i].(config.BaseMapper)
+				if !ok {
+					continue
+				}
+
+				cc := m.mapMapper(ci, all)
+				if cc != nil {
+					pkgCfs = append(pkgCfs, *cc)
+				}
+			}
+		}
+
+		defaultCf := m.mapMapper(mapper, all)
+		if defaultCf == nil {
 			continue
 		}
-		pkgCfs = append(pkgCfs, *pkgCf)
+		pkgCfs = append(pkgCfs, *defaultCf)
 		result[path] = pkgCfs
 	}
 	return result, nil
 }
 
-func (m *configMapper) mapMapper(pkg config.Mapper, all config.Base) *Config {
-	if len(pkg.GetStructs()) == 0 {
+func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Config {
+	if len(cf.GetStructs()) == 0 {
 		return nil
 	}
 
 	pkgCf := Config{
-		Output:                 m.mergeOutput(all.GetOutput(), pkg.GetOutput()),
-		InterfaceName:          pkg.GetInterfaceName(),
-		ImplementationName:     pkg.GetImplementationName(),
-		ConstructorName:        pkg.GetConstructorName(),
-		DecoratorInterfaceName: pkg.GetDecoratorInterfaceName(),
-		GenerateGoDoc:          pkg.GetGenerateGoDoc(),
+		Output:                 m.mergeOutput(all.GetOutput(), cf.GetOutput()),
+		InterfaceName:          cf.GetInterfaceName(),
+		ImplementationName:     cf.GetImplementationName(),
+		ConstructorName:        cf.GetConstructorName(),
+		DecoratorInterfaceName: cf.GetDecoratorInterfaceName(),
+		GenerateGoDoc:          cf.GetGenerateGoDoc(),
 	}
 
 	var structs []StructConfig
-	for mapperName, v := range pkg.GetStructs() {
+	for mapperName, v := range cf.GetStructs() {
 		targetStructName := mapperName
 		if v.TargetStructName != nil {
 			targetStructName = *v.TargetStructName
 		}
 		structCf := StructConfig{
 			MapperName:               mapperName,
-			TargetPkgPath:            m.mergeValue(v.TargetPkg, pkg.GetTargetPkg()),
+			TargetPkgPath:            m.mergeValue(v.TargetPkg, cf.GetTargetPkg()),
 			TargetStructName:         targetStructName,
-			SourcePkgPath:            m.mergeValue(v.SourcePkg, pkg.GetSourcePkg()),
+			SourcePkgPath:            m.mergeValue(v.SourcePkg, cf.GetSourcePkg()),
 			SourceStructName:         m.mergeValue(v.SourceStructName, targetStructName),
-			SourceToTargetFuncName:   m.mergeValue(v.SourceToTargetFunctionName, pkg.GetSourceToTargetFunctionName()),
-			SourceFromTargetFuncName: m.mergeValue(v.SourceFromTargetFunctionName, pkg.GetSourceFromTargetFunctionName()),
-			DecorateFuncName:         m.mergeValue(v.DecorateFunctionName, pkg.GetDecorateFunctionName()),
+			SourceToTargetFuncName:   m.mergeValue(v.SourceToTargetFunctionName, cf.GetSourceToTargetFunctionName()),
+			SourceFromTargetFuncName: m.mergeValue(v.SourceFromTargetFunctionName, cf.GetSourceFromTargetFunctionName()),
+			DecorateFuncName:         m.mergeValue(v.DecorateFunctionName, cf.GetDecorateFunctionName()),
 			Pointer:                  m.mapPointer(v.Pointer),
 			Fields:                   m.mapFieldConfig(v.Fields),
 			GenerateSourceToTarget:   v.GenerateSourceToTarget,

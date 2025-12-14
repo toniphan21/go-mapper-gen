@@ -1,4 +1,4 @@
-module github.com/go-mapper-gen/awesome
+module github.com/toniphan21/go-mapper-gen/examples/grpc
 
 go 1.25
 

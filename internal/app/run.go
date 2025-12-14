@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 
 	gen "github.com/toniphan21/go-mapper-gen"
+	"github.com/toniphan21/go-mapper-gen/internal/setup"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
 const appName = "go-mapper-gen"
 const binary = "github.com/toniphan21/go-mapper-gen"
-const configFileName = "config.pkl"
+const configFileName = "mapper.pkl"
 
 var mode = "dev"
 var version = "v1.0.0"
@@ -32,20 +33,32 @@ func RunCLI() {
 	cff := filepath.Join(wd, configFileName)
 	slog.Info(util.ColorGreen(appName) + " uses configuration file: " + util.ColorCyan(cff))
 
-	cf, err := gen.ParseConfig(cff)
-	//if err != nil {
-	//	slog.Error(util.ColorRed("failed to load configuration file."))
-	//	slog.Error(util.ColorRed(err.Error()))
-	//	os.Exit(1)
-	//}
+	pkgConfigs, err := gen.ParseConfig(cff)
+	if err != nil {
+		slog.Error(util.ColorRed("failed to load configuration file."))
+		slog.Error(util.ColorRed(err.Error()))
+		os.Exit(1)
+	}
 
-	//fmt.Println(cf)
 	gen.RegisterAllBuiltinConverters()
 
 	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
 	gen.PrintRegisteredConverters(logger)
 
-	for _, configs := range cf {
-		_ = gen.Generate(nil, configs, gen.DefaultFileManager())
+	fm := gen.DefaultFileManager(binary, version)
+	pkgs, err := setup.LoadDir(wd)
+	for _, pkg := range pkgs {
+		pkgPath := pkg.PkgPath
+		configs, have := pkgConfigs[pkgPath]
+		if !have {
+			continue
+		}
+
+		_ = gen.Generate(pkg, configs, fm)
+	}
+
+	outs := fm.JenFiles()
+	for p, out := range outs {
+		_ = os.WriteFile(p, []byte(out.GoString()), 0644)
 	}
 }

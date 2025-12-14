@@ -9,3 +9,9 @@ type User struct {
 	Email    string
 	Password string
 }
+
+type UserMessage struct {
+	Id       string
+	Email    string
+	Password string
+}

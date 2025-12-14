@@ -118,7 +118,7 @@ func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
 	RegisterAllBuiltinConverters()
 
 	outputs := make(map[string]string)
-	fm := DefaultFileManager()
+	fm := DefaultFileManager("github.com/toniphan21/go-mapper-gen", "test")
 
 	err := Generate(pkg, configs, fm)
 	require.NoError(t, err, "cannot generate failed")

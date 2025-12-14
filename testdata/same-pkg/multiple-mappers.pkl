@@ -1,0 +1,39 @@
+packages {
+  ["github.com/toniphan21/go-mapper-gen/golden"] {
+    // Using `priorities { [0] {...} [1] {...} }` allows configuring multiple mappers
+    // within the same package. The priority number determines the configuration
+    // order: lower numbers are generated first (e.g. `0` is generated before `1`).
+    priorities {
+      [0] {
+        interface_name = "iMapper1"
+        implementation_name = "iMapper1Impl"
+        source_pkg = "{CurrentPackage}"
+        generate_go_doc = false
+
+        structs {
+          ["MultipleMapperTarget"] { source_struct_name = "MultipleMapperSource" }
+        }
+      }
+
+      [1] {
+        interface_name = "iMapper2"
+        implementation_name = "iMapper2Impl"
+        source_pkg = "{CurrentPackage}"
+
+        structs {
+          ["MultipleMapperTarget"] { source_struct_name = "MultipleMapperSource" }
+        }
+      }
+    }
+
+    // Configuration defined outside of the `priorities {}` block represents the
+    // default mapper and is always generated last.
+    interface_name = "iMapper3"
+    implementation_name = "iMapper3Impl"
+    source_pkg = "{CurrentPackage}"
+
+    structs {
+      ["MultipleMapperTarget"] { source_struct_name = "MultipleMapperSource" }
+    }
+  }
+}
