@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/toniphan21/go-mapper-gen/internal/parse"
 )
 
 func Test_mapFieldNames(t *testing.T) {
@@ -110,9 +109,10 @@ func Test_mapFieldNames(t *testing.T) {
 			code = append(code, `}`)
 			code = append(code, ``)
 
+			pkgPath := "github.com/toniphan21/go-mapper-gen/test"
 			gtc := GoldenTestCase{
-				Name:    tc.name,
-				Package: "github.com/toniphan21/go-mapper-gen/test",
+				Name:        tc.name,
+				GoModModule: "github.com/toniphan21/go-mapper-gen/test",
 				SourceFileContents: map[string][]byte{
 					"code.go": []byte(strings.Join(code, "\n")),
 				},
@@ -128,16 +128,14 @@ func Test_mapFieldNames(t *testing.T) {
 
 			RegisterAllBuiltinConverters()
 
-			pkg, configs := Test.SetupGoldenTestCase(t, gtc)
+			parser, _, configs := Test.SetupGoldenTestCaseForPackage(t, gtc, pkgPath)
 			require.Equal(t, 1, len(configs))
 			require.Equal(t, 1, len(configs[0].Structs))
 
-			targetStruct := parse.Struct(pkg, "Target")
-			sourceStruct := parse.Struct(pkg, "Source")
-			targetFields := parse.StructFields(pkg, targetStruct)
-			sourceFields := parse.StructFields(pkg, sourceStruct)
+			targetStruct, _ := parser.FindStruct(pkgPath, "Target")
+			sourceStruct, _ := parser.FindStruct(pkgPath, "Source")
 
-			result := mapFieldNames(targetFields, sourceFields, tc.config)
+			result := mapFieldNames(targetStruct.Fields, sourceStruct.Fields, tc.config)
 			assert.Equal(t, tc.expected, result)
 		})
 	}

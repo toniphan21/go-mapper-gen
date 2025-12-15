@@ -47,27 +47,27 @@ func (m *iMapperIdenticalImpl) ToIdenticalTarget(in IdenticalSource) IdenticalTa
 	var out IdenticalTarget
 
 	out.Bool = in.Bool
-	out.Complex = in.Complex
-	out.Float32 = in.Float32
-	out.Float64 = in.Float64
 	out.Int = in.Int
+	out.Int8 = in.Int8
 	out.Int16 = in.Int16
 	out.Int32 = in.Int32
 	out.Int64 = in.Int64
-	out.Int8 = in.Int8
+	out.Float32 = in.Float32
+	out.Float64 = in.Float64
+	out.Complex = in.Complex
+	out.String = in.String
+	out.Time = in.Time
 	out.PointerBool = in.PointerBool
-	out.PointerComplex = in.PointerComplex
-	out.PointerFloat32 = in.PointerFloat32
-	out.PointerFloat64 = in.PointerFloat64
 	out.PointerInt = in.PointerInt
+	out.PointerInt8 = in.PointerInt8
 	out.PointerInt16 = in.PointerInt16
 	out.PointerInt32 = in.PointerInt32
 	out.PointerInt64 = in.PointerInt64
-	out.PointerInt8 = in.PointerInt8
+	out.PointerFloat32 = in.PointerFloat32
+	out.PointerFloat64 = in.PointerFloat64
+	out.PointerComplex = in.PointerComplex
 	out.PointerString = in.PointerString
 	out.PointerTime = in.PointerTime
-	out.String = in.String
-	out.Time = in.Time
 
 	return out
 }
@@ -76,27 +76,27 @@ func (m *iMapperIdenticalImpl) FromIdenticalTarget(in IdenticalTarget) Identical
 	var out IdenticalSource
 
 	out.Bool = in.Bool
-	out.Complex = in.Complex
-	out.Float32 = in.Float32
-	out.Float64 = in.Float64
 	out.Int = in.Int
+	out.Int8 = in.Int8
 	out.Int16 = in.Int16
 	out.Int32 = in.Int32
 	out.Int64 = in.Int64
-	out.Int8 = in.Int8
+	out.Float32 = in.Float32
+	out.Float64 = in.Float64
+	out.Complex = in.Complex
+	out.String = in.String
+	out.Time = in.Time
 	out.PointerBool = in.PointerBool
-	out.PointerComplex = in.PointerComplex
-	out.PointerFloat32 = in.PointerFloat32
-	out.PointerFloat64 = in.PointerFloat64
 	out.PointerInt = in.PointerInt
+	out.PointerInt8 = in.PointerInt8
 	out.PointerInt16 = in.PointerInt16
 	out.PointerInt32 = in.PointerInt32
 	out.PointerInt64 = in.PointerInt64
-	out.PointerInt8 = in.PointerInt8
+	out.PointerFloat32 = in.PointerFloat32
+	out.PointerFloat64 = in.PointerFloat64
+	out.PointerComplex = in.PointerComplex
 	out.PointerString = in.PointerString
 	out.PointerTime = in.PointerTime
-	out.String = in.String
-	out.Time = in.Time
 
 	return out
 }

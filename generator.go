@@ -7,18 +7,17 @@ import (
 	"strings"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/toniphan21/go-mapper-gen/internal/parse"
 	"golang.org/x/tools/go/packages"
 )
 
-func Generate(currentPkg *packages.Package, configs []Config, fileManager FileManager) error {
+func Generate(parser Parser, fileManager FileManager, currentPkg *packages.Package, configs []Config) error {
 	for _, cf := range configs {
 		file := fileManager.MakeJenFile(currentPkg, cf)
 		if file == nil {
 			continue
 		}
 
-		if err := generateMapper(file, currentPkg, cf); err != nil {
+		if err := generateMapper(parser, file, currentPkg, cf); err != nil {
 			return err
 		}
 	}
@@ -26,7 +25,7 @@ func Generate(currentPkg *packages.Package, configs []Config, fileManager FileMa
 }
 
 type convertibleField struct {
-	sortedName   string
+	index        int
 	targetSymbol Symbol
 	sourceSymbol Symbol
 	converter    Converter
@@ -65,8 +64,8 @@ func (mf *genMapFunc) paramsAndResults() ([]jen.Code, []jen.Code) {
 	return params, result
 }
 
-func generateMapper(file *jen.File, currentPkg *packages.Package, config Config) error {
-	mapFuncs, err := collectMapFuncs(currentPkg, config)
+func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config Config) error {
+	mapFuncs, err := collectMapFuncs(parser, currentPkg, config)
 	if err != nil {
 		return err
 	}
@@ -155,7 +154,7 @@ func generateCompileTimeCheck(file *jen.File, interfaceName, implName string) {
 	return
 }
 
-func collectMapFuncs(currentPkg *packages.Package, config Config) ([]genMapFunc, error) {
+func collectMapFuncs(parser Parser, currentPkg *packages.Package, config Config) ([]genMapFunc, error) {
 	var mapFuncs []genMapFunc
 	for _, cf := range config.Structs {
 		var vars = map[string]string{
@@ -163,6 +162,18 @@ func collectMapFuncs(currentPkg *packages.Package, config Config) ([]genMapFunc,
 			Placeholder.CurrentPackageName: currentPkg.Name,
 			Placeholder.TargetStructName:   cf.TargetStructName,
 			Placeholder.SourceStructName:   cf.SourceStructName,
+		}
+
+		targetStruct, ok := parser.FindStruct(replacePlaceholders(cf.TargetPkgPath, vars), cf.TargetStructName)
+		if !ok {
+			// log struct not found
+			continue
+		}
+
+		sourceStruct, ok := parser.FindStruct(replacePlaceholders(cf.SourcePkgPath, vars), cf.SourceStructName)
+		if !ok {
+			// log source struct not found
+			continue
 		}
 
 		var useTargetPointer, useSourcePointer bool
@@ -179,14 +190,6 @@ func collectMapFuncs(currentPkg *packages.Package, config Config) ([]genMapFunc,
 			useSourcePointer = false
 		}
 
-		targetStruct := parse.Struct(currentPkg, cf.TargetStructName)
-		sourceStruct := parse.Struct(currentPkg, cf.SourceStructName)
-
-		targetStructType := parse.StructType(currentPkg, cf.TargetStructName)
-		sourceStructType := parse.StructType(currentPkg, cf.SourceStructName)
-		targetFields := parse.StructFields(currentPkg, targetStruct)
-		sourceFields := parse.StructFields(currentPkg, sourceStruct)
-
 		if cf.GenerateSourceToTarget {
 			toTargetFuncName := replacePlaceholders(cf.SourceToTargetFuncName, vars)
 
@@ -199,14 +202,14 @@ func collectMapFuncs(currentPkg *packages.Package, config Config) ([]genMapFunc,
 				funcName:         toTargetFuncName,
 				decorateFuncName: decorateToTargetFuncName,
 				targetParamName:  "out",
-				targetType:       targetStructType,
+				targetType:       targetStruct.Type,
 				targetPointer:    useTargetPointer,
 				sourceParamName:  "in",
-				sourceType:       sourceStructType,
+				sourceType:       sourceStruct.Type,
 				sourcePointer:    useSourcePointer,
 			}
 
-			fillMapFunc(&mapFunc, targetFields, sourceFields, cf.Fields)
+			fillMapFunc(&mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields)
 			mapFuncs = append(mapFuncs, mapFunc)
 		}
 
@@ -222,21 +225,21 @@ func collectMapFuncs(currentPkg *packages.Package, config Config) ([]genMapFunc,
 				funcName:         fromTargetFuncName,
 				decorateFuncName: decorateFromTargetFuncName,
 				targetParamName:  "out",
-				targetType:       sourceStructType,
+				targetType:       sourceStruct.Type,
 				targetPointer:    useSourcePointer,
 				sourceParamName:  "in",
-				sourceType:       targetStructType,
+				sourceType:       targetStruct.Type,
 				sourcePointer:    useTargetPointer,
 			}
 
-			fillMapFunc(&mapFunc, sourceFields, targetFields, cf.Fields.Flip())
+			fillMapFunc(&mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip())
 			mapFuncs = append(mapFuncs, mapFunc)
 		}
 	}
 	return mapFuncs, nil
 }
 
-func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]types.Type, config FieldConfig) {
+func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig) {
 	mappedFields := mapFieldNames(targetFields, sourceFields, config)
 	for target, source := range mappedFields {
 		if source == "" {
@@ -244,35 +247,35 @@ func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]type
 			continue
 		}
 
-		tt, ok := targetFields[target]
+		ti, ok := targetFields[target]
 		if !ok {
 			continue
 		}
-		st, ok := sourceFields[source]
+		si, ok := sourceFields[source]
 		if !ok {
 			continue
 		}
 
-		converter, ok := FindConverter(tt, st)
+		converter, ok := FindConverter(ti.Type, si.Type)
 		if !ok {
 			mapFunc.unconvertibleField = append(mapFunc.unconvertibleField, target)
 			continue
 		}
 
 		mapFunc.mappedFields = append(mapFunc.mappedFields, convertibleField{
-			sortedName:   target,
-			targetSymbol: newSymbol("out", target, tt),
-			sourceSymbol: newSymbol("in", source, st),
+			index:        ti.Index,
+			targetSymbol: newSymbol("out", target, ti.Type),
+			sourceSymbol: newSymbol("in", source, si.Type),
 			converter:    converter,
 		})
 	}
 
 	slices.SortFunc(mapFunc.mappedFields, func(a, b convertibleField) int {
-		return strings.Compare(a.sortedName, b.sortedName)
+		return a.index - b.index
 	})
 }
 
-func mapFieldNames(targetFields, sourceFields map[string]types.Type, config FieldConfig) map[string]string {
+func mapFieldNames(targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig) map[string]string {
 	result := make(map[string]string)
 	for target, _ := range targetFields {
 		result[target] = ""

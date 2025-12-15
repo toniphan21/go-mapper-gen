@@ -6,16 +6,11 @@ import (
 	"path/filepath"
 
 	gen "github.com/toniphan21/go-mapper-gen"
-	"github.com/toniphan21/go-mapper-gen/internal/setup"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
 const appName = "go-mapper-gen"
-const binary = "github.com/toniphan21/go-mapper-gen"
 const configFileName = "mapper.pkl"
-
-var mode = "dev"
-var version = "v1.0.0"
 
 func RunCLI() {
 	wd, err := os.Getwd()
@@ -27,7 +22,7 @@ func RunCLI() {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
-	slog.Info(util.ColorGreen(appName) + " " + version)
+	slog.Info(util.ColorGreen(appName) + " " + gen.Version())
 	slog.Info(util.ColorGreen(appName) + " is working on directory: " + util.ColorCyan(wd))
 
 	cff := filepath.Join(wd, configFileName)
@@ -45,16 +40,20 @@ func RunCLI() {
 	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
 	gen.PrintRegisteredConverters(logger)
 
-	fm := gen.DefaultFileManager(binary, version)
-	pkgs, err := setup.LoadDir(wd)
-	for _, pkg := range pkgs {
+	fm := gen.DefaultFileManager()
+	parser, err := gen.DefaultParser(wd)
+	if err != nil {
+		slog.Error(util.ColorRed("failed to parse source code."))
+	}
+
+	for _, pkg := range parser.SourcePackages() {
 		pkgPath := pkg.PkgPath
 		configs, have := pkgConfigs[pkgPath]
 		if !have {
 			continue
 		}
 
-		_ = gen.Generate(pkg, configs, fm)
+		_ = gen.Generate(parser, fm, pkg, configs)
 	}
 
 	outs := fm.JenFiles()

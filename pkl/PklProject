@@ -1,0 +1,13 @@
+amends "pkl:Project"
+
+package {
+  name = "go-mapper-gen"
+  version = "0.1.0"
+  baseUri = "package://github.com/toniphan21/go-mapper-gen"
+  packageZipUrl = "https://github.com/toniphan21/go-mapper-gen/pkl/go-mapper-gen.zip"
+
+  authors {
+    "Nhat Phan <toniphan21@gmail.com>"
+  }
+  license = "MIT"
+}

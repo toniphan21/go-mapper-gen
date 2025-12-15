@@ -26,7 +26,7 @@ func Test_typeToPointerConverter(t *testing.T) {
 		{
 			Name:               "pgtype.Text to *pgtype.Text",
 			Imports:            map[string]string{"pgtype": "github.com/jackc/pgx/v5/pgtype"},
-			GoModRequires:      []string{"github.com/jackc/pgx/v5 v5.5.4"},
+			GoModRequires:      map[string]string{"github.com/jackc/pgx/v5": "v5.5.4"},
 			SourceType:         "pgtype.Text",
 			TargetType:         "*pgtype.Text",
 			ExpectedCanConvert: true,

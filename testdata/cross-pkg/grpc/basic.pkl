@@ -1,0 +1,10 @@
+packages {
+  ["github.com/toniphan21/go-mapper-gen/golden/grpc"] {
+    source_pkg = "github.com/toniphan21/go-mapper-gen/golden/domain"
+
+    structs {
+      ["UserMessage"] { source_struct_name = "User" }
+    }
+  }
+}
+

@@ -1,8 +1,8 @@
 package gomappergen
 
 import (
-	"errors"
 	"fmt"
+	"go/types"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,7 +10,6 @@ import (
 	"github.com/dave/jennifer/jen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/toniphan21/go-mapper-gen/internal/parse"
 	"github.com/toniphan21/go-mapper-gen/internal/setup"
 	"github.com/toniphan21/go-mapper-gen/internal/setup/file"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
@@ -20,9 +19,8 @@ import (
 type GoldenTestCase struct {
 	Name               string
 	GoModGoVersion     string
-	GoModRequires      []string
+	GoModRequires      map[string]string
 	GoModModule        string
-	Package            string
 	SourceFileContents map[string][]byte
 	PklFileContent     []byte
 	GoldenFileContent  map[string][]byte
@@ -33,7 +31,7 @@ type ConverterTestCase struct {
 	Name                         string
 	Imports                      map[string]string
 	GoModGoVersion               string
-	GoModRequires                []string
+	GoModRequires                map[string]string
 	GoModModule                  string
 	TargetType                   string
 	SourceType                   string
@@ -57,46 +55,36 @@ func (h *testHelper) SetupConfig(t *testing.T, lines ...string) (map[string][]Co
 	return ParseConfig(filepath.Join(dir, "dev/config.pkl"))
 }
 
-func (h *testHelper) Parse(t *testing.T, files []file.File, runGoModTidy bool) ([]*packages.Package, error) {
+func (h *testHelper) Parse(t *testing.T, files []file.File, requires map[string]string) (Parser, error) {
 	dir := setup.SourceCode(t, files)
-	if runGoModTidy {
-		setup.RunGoModTidy(t, dir)
+	if len(requires) > 0 {
+		setup.RunGoGet(t, dir, requires)
 	}
-
-	pkgs, err := setup.LoadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	return pkgs, nil
+	return DefaultParser(dir)
 }
 
-func (h *testHelper) ParsePackage(t *testing.T, files []file.File, runGoModTidy bool, pkgPath string) (*packages.Package, error) {
-	pkgs, err := h.Parse(t, files, runGoModTidy)
-	if err != nil {
-		return nil, err
-	}
-	for _, pkg := range pkgs {
+func (h *testHelper) SetupGoldenTestCaseForPackage(t *testing.T, tc GoldenTestCase, pkgPath string) (Parser, *packages.Package, []Config) {
+	parser, configs := h.SetupGoldenTestCase(t, tc)
+
+	config, ok := configs[pkgPath]
+	require.True(t, ok, fmt.Sprintf("there is no config for package %v in pkl file", pkgPath))
+
+	for _, pkg := range parser.SourcePackages() {
 		if pkg.PkgPath == pkgPath {
-			return pkg, nil
+			return parser, pkg, config
 		}
 	}
-	return nil, errors.New("package not found")
+	panic(fmt.Sprintf("package %v not found", pkgPath))
 }
 
-func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (*packages.Package, []Config) {
+func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parser, map[string][]Config) {
 	configs, err := Test.SetupConfig(t, string(tc.PklFileContent))
 	require.NoError(t, err, "cannot set up pkl config file")
-
-	config, ok := configs[tc.Package]
-	require.True(t, ok, fmt.Sprintf("there is no config for package %v in pkl file", tc.Package))
 
 	goMod := &file.GoMod{
 		Module:   tc.GoModModule,
 		Version:  tc.GoModGoVersion,
 		Requires: tc.GoModRequires,
-	}
-	if goMod.Module == "" {
-		goMod.Module = tc.Package
 	}
 
 	var sourceFiles []file.File
@@ -106,22 +94,29 @@ func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (*pack
 		sourceFiles = append(sourceFiles, file.New(filePath, fileContent))
 	}
 
-	pkg, err := Test.ParsePackage(t, sourceFiles, len(goMod.Requires) > 0, tc.Package)
-	require.NoError(t, err, fmt.Sprintf("cannot load package %v", tc.Package))
-
-	return pkg, config
+	parser, err := Test.Parse(t, sourceFiles, goMod.Requires)
+	require.NoError(t, err, "cannot parse source files")
+	return parser, configs
 }
 
 func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
-	pkg, configs := h.SetupGoldenTestCase(t, tc)
+	parser, pkgConfigs := h.SetupGoldenTestCase(t, tc)
 
 	RegisterAllBuiltinConverters()
 
 	outputs := make(map[string]string)
-	fm := DefaultFileManager("github.com/toniphan21/go-mapper-gen", "test")
+	fm := defaultFileManager("test")
 
-	err := Generate(pkg, configs, fm)
-	require.NoError(t, err, "cannot generate failed")
+	for _, pkg := range parser.SourcePackages() {
+		pkgPath := pkg.PkgPath
+		configs, have := pkgConfigs[pkgPath]
+		if !have {
+			continue
+		}
+
+		err := Generate(parser, fm, pkg, configs)
+		require.NoError(t, err, "cannot generate for package %s", pkgPath)
+	}
 
 	for fileName, jf := range fm.JenFiles() {
 		outputs[fileName] = jf.GoString()
@@ -175,51 +170,42 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 		setup.RunGoModTidy(t, dir)
 	}
 
-	pkgs, err := setup.LoadDir(dir)
+	parser, err := DefaultParser(dir)
 	require.NoError(t, err)
 
 	var pkg *packages.Package
-	for _, v := range pkgs {
+	for _, v := range parser.SourcePackages() {
 		if v.Name == "test" {
 			pkg = v
 		}
 	}
 	require.NotNil(t, pkg)
 
-	ts := parse.Struct(pkg, "Target")
-	ss := parse.Struct(pkg, "Source")
-	require.NotNil(t, ts)
-	require.NotNil(t, ss)
+	targetStruct, ok := parser.FindStruct(pkg.PkgPath, "Target")
+	require.True(t, ok)
 
-	tt := parse.StructType(pkg, "Target")
-	st := parse.StructType(pkg, "Source")
-	require.NotNil(t, tt)
-	require.NotNil(t, st)
-	require.False(t, parse.IsInvalidType(tt), "Target type is invalid, use Imports and GoModRequires to import the package")
-	require.False(t, parse.IsInvalidType(st), "Source type is invalid, use Imports and GoModRequires to import the package")
+	sourceStruct, ok := parser.FindStruct(pkg.PkgPath, "Source")
+	require.True(t, ok)
 
-	tsf := parse.StructFields(pkg, ts)
-	ssf := parse.StructFields(pkg, ss)
+	targetFieldInfo := targetStruct.Fields["targetField"]
+	sourceFieldInfo := sourceStruct.Fields["sourceField"]
 
-	targetType := tsf["targetField"]
-	sourceType := ssf["sourceField"]
+	require.NotNil(t, targetFieldInfo)
+	require.NotNil(t, sourceFieldInfo)
 
-	require.NotNil(t, targetType)
-	require.NotNil(t, sourceType)
-
-	require.False(t, parse.IsInvalidType(targetType), "Target type is invalid, use Imports and GoModRequires to import the package")
-	require.False(t, parse.IsInvalidType(sourceType), "Source type is invalid, use Imports and GoModRequires to import the package")
+	require.False(t, isInvalidType(targetFieldInfo.Type), "Target type is invalid, use Imports and GoModRequires to import the package")
+	require.False(t, isInvalidType(sourceFieldInfo.Type), "Source type is invalid, use Imports and GoModRequires to import the package")
 
 	if !tc.ExpectedCanConvert {
-		var expected = converter.CanConvert(targetType, sourceType)
+		var expected = converter.CanConvert(targetFieldInfo.Type, sourceFieldInfo.Type)
 		assert.Equal(t, false, expected, "CanConvert should returns false but returns true")
 		return
 	}
 
 	targetField := "targetField"
 	sourceField := "sourceField"
-	targetSymbol := Symbol{VarName: "out", Type: targetType}
-	sourceSymbol := Symbol{VarName: "in", Type: sourceType}
+	targetSymbol := Symbol{VarName: "out", Type: targetFieldInfo.Type}
+	sourceSymbol := Symbol{VarName: "in", Type: sourceFieldInfo.Type}
 	if !tc.TargetSymbolWithoutFieldName {
 		targetSymbol.FieldName = &targetField
 	} else {
@@ -236,7 +222,7 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 
 	var blocks []jen.Code
 	if tc.TargetSymbolWithoutFieldName {
-		blocks = append(blocks, jen.Var().Id("target").Add(GeneratorUtil.TypeToJenCode(targetType)))
+		blocks = append(blocks, jen.Var().Id("target").Add(GeneratorUtil.TypeToJenCode(targetFieldInfo.Type)))
 	}
 	if tc.SourceSymbolWithoutFieldName {
 		blocks = append(blocks, jen.Id("source").Op(":=").Id("in").Dot("sourceField"))
@@ -262,8 +248,8 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 	}
 
 	jf.Func().Id("convert").Params(
-		jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(st))),
-		jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(tt))),
+		jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(sourceStruct.Type))),
+		jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(targetStruct.Type))),
 	).Block(blocks...).Line()
 
 	expected := []string{
@@ -320,3 +306,7 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 }
 
 var Test = &testHelper{}
+
+func isInvalidType(t types.Type) bool {
+	return t == nil || t == types.Typ[types.Invalid]
+}

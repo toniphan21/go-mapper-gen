@@ -28,7 +28,7 @@ func (g Go) FileContent() []byte {
 type GoMod struct {
 	Module   string
 	Version  string
-	Requires []string
+	Requires map[string]string // package => version
 }
 
 func (g GoMod) GetModule() string {
@@ -54,8 +54,8 @@ func (g GoMod) FileContent() []byte {
 
 	lines = append(lines, fmt.Sprintf("module %s\n", g.GetModule()))
 	lines = append(lines, fmt.Sprintf("go %s\n", g.GetVersion()))
-	for _, v := range g.Requires {
-		lines = append(lines, fmt.Sprintf("require %s", v))
+	for pkg, version := range g.Requires {
+		lines = append(lines, fmt.Sprintf("require %s %s", pkg, version))
 	}
 
 	return []byte(strings.Join(lines, "\n"))
