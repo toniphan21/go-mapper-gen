@@ -6,10 +6,17 @@ import (
 	"context"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/apple/pkl-go/pkl"
 	"github.com/toniphan21/go-mapper-gen/internal/config"
 )
+
+type Config struct {
+	BuiltInConverters  BuiltInConverterConfig
+	ConverterFunctions []ConvertFunctionConfig
+	Packages           map[string][]PackageConfig
+}
 
 type Output struct {
 	PkgName      string
@@ -17,7 +24,23 @@ type Output struct {
 	TestFileName string
 }
 
-type Config struct {
+type BuiltInConverterConfig struct {
+	UseIdentical     bool
+	UseSlice         bool
+	UseTypeToPointer bool
+	UsePointerToType bool
+	UseFunctions     bool
+}
+
+func (c *BuiltInConverterConfig) EnableAll() {
+	c.UseIdentical = true
+	c.UseSlice = true
+	c.UseTypeToPointer = true
+	c.UsePointerToType = true
+	c.UseFunctions = true
+}
+
+type PackageConfig struct {
 	Output                 Output
 	InterfaceName          string
 	ImplementationName     string
@@ -25,7 +48,6 @@ type Config struct {
 	DecoratorInterfaceName string
 	Structs                []StructConfig
 	GenerateGoDoc          bool
-	ConvertFunctions       []ConvertFunctionConfig
 }
 
 type FieldConfig struct {
@@ -44,18 +66,9 @@ func (c FieldConfig) Flip() FieldConfig {
 	return FieldConfig{NameMatch: c.NameMatch, ManualMap: mm}
 }
 
-type TypeConfig struct {
+type ConvertFunctionConfig struct {
 	PackagePath string
 	TypeName    string
-	IsPointer   bool
-}
-
-type ConvertFunctionConfig struct {
-	Target      TypeConfig
-	Source      TypeConfig
-	PackagePath string
-	FuncName    string
-	VarName     *string
 }
 
 type StructConfig struct {
@@ -136,7 +149,7 @@ var Default = defaultCfValue{
 	TargetPkgPath:            Placeholder.CurrentPackage,
 }
 
-func ParseConfig(path string) (map[string][]Config, error) {
+func ParseConfig(path string) (*Config, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, err
 	}
@@ -150,18 +163,51 @@ func ParseConfig(path string) (map[string][]Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (&configMapper{}).mapPackagesConfig(cfg.Packages, cfg.All)
+
+	m := &configMapper{}
+	pkgConfigs, err := m.mapPackagesConfig(cfg.Packages, cfg.All)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Config{
+		BuiltInConverters:  m.mapBuiltInConverterConfig(cfg.Converter.BuiltIn),
+		ConverterFunctions: m.mapConverterFunctions(cfg.Converter.Functions),
+		Packages:           pkgConfigs,
+	}, nil
 }
 
 type configMapper struct{}
 
-func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all config.Base) (map[string][]Config, error) {
-	var result = make(map[string][]Config)
+func (m *configMapper) mapBuiltInConverterConfig(in config.BuiltInConverter) BuiltInConverterConfig {
+	return BuiltInConverterConfig{
+		UseIdentical:     in.EnableIdentical,
+		UseSlice:         in.EnableSlice,
+		UseTypeToPointer: in.EnableTypeToPointer,
+		UsePointerToType: in.EnablePointerToType,
+		UseFunctions:     in.EnableFunctions,
+	}
+}
+
+func (m *configMapper) mapConverterFunctions(list *[]string) []ConvertFunctionConfig {
+	if list == nil {
+		return nil
+	}
+
+	var result []ConvertFunctionConfig
+	for _, v := range *list {
+		result = append(result, parseConverterFunctionConfigFromString(v))
+	}
+	return result
+}
+
+func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all config.Base) (map[string][]PackageConfig, error) {
+	var result = make(map[string][]PackageConfig)
 	if packages == nil {
 		return result, nil
 	}
 
-	var pkgCfs []Config
+	var pkgCfs []PackageConfig
 
 	for path, mapper := range packages {
 		if mapper.GetPriorities() != nil {
@@ -195,12 +241,12 @@ func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all 
 	return result, nil
 }
 
-func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Config {
+func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *PackageConfig {
 	if len(cf.GetStructs()) == 0 {
 		return nil
 	}
 
-	pkgCf := Config{
+	pkgCf := PackageConfig{
 		Output:                 m.mergeOutput(all.GetOutput(), cf.GetOutput()),
 		InterfaceName:          cf.GetInterfaceName(),
 		ImplementationName:     cf.GetImplementationName(),
@@ -304,4 +350,23 @@ func (m *configMapper) mapFieldConfig(in config.Fields) FieldConfig {
 		NameMatch: m.mapNameMatch(in.Match),
 		ManualMap: manualMap,
 	}
+}
+
+func parseConverterFunctionConfigFromString(input string) ConvertFunctionConfig {
+	result := ConvertFunctionConfig{}
+
+	s := input
+
+	lastSlash := strings.LastIndex(s, "/")
+	separatorIndex := strings.LastIndex(s, ".")
+
+	if separatorIndex > lastSlash {
+		result.PackagePath = s[:separatorIndex]
+		s = s[separatorIndex+1:]
+	} else {
+		result.PackagePath = ""
+	}
+
+	result.TypeName = s
+	return result
 }

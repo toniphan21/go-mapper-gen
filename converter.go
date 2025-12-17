@@ -1,6 +1,7 @@
 package gomappergen
 
 import (
+	"context"
 	"fmt"
 	"go/types"
 	"log/slog"
@@ -42,10 +43,6 @@ func newSymbol(varName string, fieldName string, typ types.Type) Symbol {
 	return Symbol{VarName: varName, FieldName: &fn, Type: typ}
 }
 
-type ConverterOption struct {
-	EmitTraceComments bool
-}
-
 func (s Symbol) Expr() *jen.Statement {
 	if s.FieldName == nil {
 		return jen.Id(s.VarName)
@@ -62,66 +59,178 @@ func (s Symbol) ToIndexedSymbol(idx string) Symbol {
 	return Symbol{VarName: s.VarName, FieldName: &fieldName, Type: s.Type}
 }
 
-// Converter defines a pluggable conversion rule used by the mapper generator.
-// Implementations decide whether they support converting between two Go types
-// and, if so, generate the appropriate code snippets using jennifer.
-//
-// A converter participates in three phases:
-//
-//  1. CanConvert:
-//     Determines whether this converter supports converting from sourceType
-//     to targetType. It should NOT generate code or perform side effects.
-//
-//  2. Before:
-//     Generates optional "preamble" code that must appear before the final
-//     assignment. This is commonly used to declare temporary variables or
-//     prepare intermediate values. The returned jen.Code may be nil, in which
-//     case the caller simply emits nothing.
-//
-//     currentVarCount is supplied by the caller and represents the current
-//     counter for temporary variable allocation. The returned nextVarCount
-//     must be the updated counter after any temp variables introduced by this
-//     converter. This keeps temp variable naming consistent across the whole
-//     generated file.
-//
-//  3. Assign:
-//     Generates the actual assignment code that writes the converted value
-//     from the source Symbol into the target Symbol. As with Before, the
-//     returned jen.Code may be nil, meaning the converter chooses not to emit
-//     anything.
-//
-// Converters must not assume they are the only converter in the system.
-// Priority or selection logic is handled externally by the caller.
+// Converter defines the contract for converting a source value or field
+// into a target value or field during code generation.
 type Converter interface {
-	// Print returns a human-readable name or label for this converter.
-	// This is typically used for debugging or logging and has no impact on
-	// generation semantics.
-	Print() string
+	// Init is called once before code generation starts.
+	// It allows the converter to initialize internal state, validate assumptions,
+	// or prepare data required during code generation. Init must not emit code.
+	// If no initialization is required, the implementation may be a no-op.
+	Init(parser Parser, config Config)
+
+	// Info returns metadata describing the converter.
+	Info() ConverterInfo
 
 	// CanConvert reports whether this converter can convert a value of
 	// sourceType into a value of targetType. Implementations typically use
 	// TypeUtil to perform type analysis.
 	//
 	// CanConvert must be pure and must not modify file state.
-	CanConvert(targetType, sourceType types.Type) bool
+	CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool
 
-	// Before emits optional pre-assignment code. If the returned jen.Code is
-	// nil, the caller simply emits nothing.
-	//
-	// file is the jennifer file being built.
-	// target and source describe the left-hand and right-hand expressions.
-	// currentVarCount tracks temporary variable allocation.
-	//
-	// nextVarCount must be returned to keep temp variable numbering consistent.
-	// GeneratorUtil may be used to simplify emission of helpers or temps.
-	Before(file *jen.File, target, source Symbol, currentVarCount int, opt ConverterOption) (code jen.Code, nextVarCount int)
-
-	// Assign emits the assignment code that writes the converted value from
+	// ConvertField emits the assignment code that writes the converted value from
 	// source into target. Returning nil suppresses emission.
 	//
 	// GeneratorUtil may be used to build complex expression trees.
-	Assign(file *jen.File, target, source Symbol, opt ConverterOption) jen.Code
+	ConvertField(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code
 }
+
+// ConverterContext provides shared capabilities and state for converters
+// during code generation. It embeds context.Context to support cancellation
+// and timeouts defined by the generator.
+type ConverterContext interface {
+	context.Context
+
+	// JenFile returns the current jennifer file used for code generation.
+	// Converters may append generated code to this file.
+	JenFile() *jen.File
+
+	// Parser returns the type parser used to inspect and analyze Go types
+	// during conversion.
+	Parser() Parser
+
+	// NextVarName returns a unique variable name for use in generated code.
+	// It guarantees no name collisions within the current generation scope.
+	NextVarName() string
+
+	// Logger returns a slog handler that can be used for logging during
+	// code generation.
+	Logger() slog.Handler
+
+	// LookUp searches the global converter registry for a converter that
+	// can convert a value of sourceType to targetType, excluding the provided
+	// currentConverter (if non-nil).
+	//
+	// This helper is intended for converter implementations that need to
+	// delegate or reuse existing conversion rules. A common use-case is a
+	// SliceConverter that converts []T -> []V by looking up a converter for
+	// T -> V and then generating per-element conversion code.
+	//
+	// Selection rules (implementation contract):
+	//  1. The registry is scanned for converters c where c.CanConvert(targetType, sourceType)
+	//     returns true.
+	//  2. The currentConverter parameter is excluded from consideration to avoid
+	//     trivial self-selection (if currentConverter == nil, no exclusion occurs).
+	//  3. From the remaining candidates, the converter with the highest priority
+	//     (your package's ordering rule: lower numeric value = higher priority)
+	//     is chosen. If multiple converters share the same priority, the selection
+	//     must be deterministic (for example: registration order or stable sorting).
+	//
+	// Return value:
+	//   - (Converter, true) if a matching converter was found.
+	//   - (nil, false) if no converter in the registry can perform the conversion.
+	LookUp(current Converter, targetType, sourceType types.Type) (Converter, bool)
+
+	// Run executes runner if the context has not been cancelled.
+	// If the context is done, Run returns nil and runner is not executed.
+	// This allows converters to respect generator-defined timeouts without
+	// explicitly checking ctx.Done().
+	Run(converter Converter, opts ConverterOption, runner func() jen.Code) jen.Code
+}
+
+type converterContext struct {
+	context.Context
+	jenFile         *jen.File
+	parser          Parser
+	logger          slog.Handler
+	currentVarCount int
+}
+
+func (c *converterContext) JenFile() *jen.File {
+	return c.jenFile
+}
+
+func (c *converterContext) Parser() Parser {
+	return c.parser
+}
+
+func (c *converterContext) NextVarName() string {
+	v := fmt.Sprintf("v%d", c.currentVarCount)
+	c.currentVarCount++
+	return v
+}
+
+func (c *converterContext) Run(converter Converter, opts ConverterOption, runner func() jen.Code) jen.Code {
+	select {
+	case <-c.Done():
+		return nil
+	default:
+	}
+
+	code := runner()
+
+	var out jen.Code
+	if opts.EmitTraceComments {
+		info := converter.Info()
+		out = jen.Comment(fmt.Sprintf("%s generated code start", info.Name)).Line().
+			Add(code).Line().
+			Add(jen.Comment(fmt.Sprintf("%s generated code end", info.Name)))
+	} else {
+		out = code
+	}
+
+	select {
+	case <-c.Done():
+		return nil
+	default:
+		return out
+	}
+}
+
+func (c *converterContext) Logger() slog.Handler {
+	return c.logger
+}
+
+func (c *converterContext) LookUp(current Converter, targetType, sourceType types.Type) (Converter, bool) {
+	for _, reg := range converters {
+		if current != nil {
+			if current == reg.converter {
+				continue
+			}
+
+			if normalizeConverterType(current) == reg.typ {
+				continue
+			}
+		}
+
+		if reg.converter.CanConvert(c, targetType, sourceType) {
+			return reg.converter, true
+		}
+	}
+	return nil, false
+}
+
+func (c *converterContext) resetVarCount() {
+	c.currentVarCount = 0
+}
+
+var _ ConverterContext = (*converterContext)(nil)
+
+// ConverterInfo describes metadata about a Converter.
+// It is primarily used for debugging, logging, and trace comments
+// in generated code.
+type ConverterInfo struct {
+	Name                 string
+	Description          string
+	ShortForm            string
+	ShortFormDescription string
+}
+
+type ConverterOption struct {
+	EmitTraceComments bool
+}
+
+// ---
 
 type registeredConverter struct {
 	converter Converter
@@ -185,80 +294,97 @@ func RegisterConverter(converter Converter, priority int) {
 	registerConverter(converter, priority, false)
 }
 
-// LookUpConverter searches the global converter registry for a converter that
-// can convert a value of sourceType to targetType, excluding the provided
-// currentConverter (if non-nil).
-//
-// This helper is intended for converter implementations that need to
-// delegate or reuse existing conversion rules. A common use-case is a
-// SliceConverter that converts []T -> []V by looking up a converter for
-// T -> V and then generating per-element conversion code.
-//
-// Selection rules (implementation contract):
-//  1. The registry is scanned for converters c where c.CanConvert(targetType, sourceType)
-//     returns true.
-//  2. The currentConverter parameter is excluded from consideration to avoid
-//     trivial self-selection (if currentConverter == nil, no exclusion occurs).
-//  3. From the remaining candidates, the converter with the highest priority
-//     (your package's ordering rule: lower numeric value = higher priority)
-//     is chosen. If multiple converters share the same priority, the selection
-//     must be deterministic (for example: registration order or stable sorting).
-//
-// Return value:
-//   - (Converter, true) if a matching converter was found.
-//   - (nil, false) if no converter in the registry can perform the conversion.
-func LookUpConverter(current Converter, targetType, sourceType types.Type) (Converter, bool) {
-	for _, reg := range converters {
-		if current != nil {
-			if current == reg.converter {
-				continue
-			}
-
-			if normalizeConverterType(current) == reg.typ {
-				continue
-			}
-		}
-
-		if reg.converter.CanConvert(targetType, sourceType) {
-			return reg.converter, true
+func PrintRegisteredConverters(logger *slog.Logger) {
+	shortFormBuffer := 0
+	for _, c := range converters {
+		info := c.converter.Info()
+		l := len(info.ShortForm)
+		if l > shortFormBuffer {
+			shortFormBuffer = l
 		}
 	}
-	return nil, false
-}
 
-func PrintRegisteredConverters(logger *slog.Logger) {
 	for _, v := range converters {
 		builtin := ""
 		if v.builtIn {
 			builtin = util.ColorCyan("[built-in]")
 		}
 
+		info := v.converter.Info()
+		line := fmt.Sprintf("%-*s %v", shortFormBuffer+1, info.ShortForm, info.ShortFormDescription)
+
 		logger.Info(
 			fmt.Sprintf("%s %10s %s",
 				util.ColorBlue(fmt.Sprintf("%5s", strconv.Itoa(v.priority))),
 				builtin,
-				v.converter.Print(),
+				line,
 			),
 		)
 	}
 }
 
 func RegisterAllBuiltinConverters() {
-	RegisterBaseConverters()
+	cf := BuiltInConverterConfig{}
+	cf.EnableAll()
+
+	RegisterBuiltinConverters(cf)
 }
 
-func RegisterBaseConverters() {
-	registerConverter(&identicalTypeConverter{}, 0, true)
-	registerConverter(&sliceConverter{}, 1, true)
-	registerConverter(&typeToPointerConverter{}, 2, true)
-	registerConverter(&pointerToTypeConverter{}, 3, true)
+func RegisterBuiltinConverters(config BuiltInConverterConfig) {
+	priority := 0
+	if config.UseIdentical {
+		registerConverter(BuiltinConverters.IdenticalType, priority, true)
+		priority++
+	}
+
+	if config.UseSlice {
+		registerConverter(BuiltinConverters.Slice, priority, true)
+		priority++
+	}
+
+	if config.UseTypeToPointer {
+		registerConverter(BuiltinConverters.TypeToPointer, priority, true)
+		priority++
+	}
+
+	if config.UsePointerToType {
+		registerConverter(BuiltinConverters.PointerToType, priority, true)
+		priority++
+	}
+
+	if config.UseFunctions {
+		registerConverter(BuiltinConverters.Functions, priority, true)
+		priority++
+	}
 }
 
-func FindConverter(targetType, sourceType types.Type) (Converter, bool) {
+func InitAllRegisteredConverters(parser Parser, parsedConfig Config) {
+	for _, v := range converters {
+		v.converter.Init(parser, parsedConfig)
+	}
+}
+
+func findConverter(ctx ConverterContext, targetType, sourceType types.Type) (Converter, bool) {
 	for _, reg := range converters {
-		if reg.converter.CanConvert(targetType, sourceType) {
+		if reg.converter.CanConvert(ctx, targetType, sourceType) {
 			return reg.converter, true
 		}
 	}
 	return nil, false
+}
+
+type builtinConverters struct {
+	IdenticalType Converter
+	Slice         Converter
+	TypeToPointer Converter
+	PointerToType Converter
+	Functions     Converter
+}
+
+var BuiltinConverters = builtinConverters{
+	IdenticalType: &identicalTypeConverter{},
+	Slice:         &sliceConverter{},
+	TypeToPointer: &typeToPointerConverter{},
+	PointerToType: &pointerToTypeConverter{},
+	Functions:     &functionsConverter{},
 }

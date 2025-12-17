@@ -10,6 +10,8 @@ import (
 type Config struct {
 	All Base `pkl:"all"`
 
+	Converter Converter `pkl:"converter"`
+
 	Packages map[string]Mapper `pkl:"packages"`
 }
 

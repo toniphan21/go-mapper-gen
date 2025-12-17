@@ -1,6 +1,7 @@
 package gomappergen
 
 import (
+	"context"
 	"fmt"
 	"go/types"
 	"slices"
@@ -10,7 +11,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Generate(parser Parser, fileManager FileManager, currentPkg *packages.Package, configs []Config) error {
+func Generate(parser Parser, fileManager FileManager, currentPkg *packages.Package, configs []PackageConfig) error {
 	for _, cf := range configs {
 		file := fileManager.MakeJenFile(currentPkg, cf)
 		if file == nil {
@@ -64,8 +65,14 @@ func (mf *genMapFunc) paramsAndResults() ([]jen.Code, []jen.Code) {
 	return params, result
 }
 
-func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config Config) error {
-	mapFuncs, err := collectMapFuncs(parser, currentPkg, config)
+func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config PackageConfig) error {
+	ctx := &converterContext{
+		Context: context.Background(),
+		jenFile: file,
+		parser:  parser,
+		logger:  nil,
+	}
+	mapFuncs, err := collectMapFuncs(ctx, currentPkg, config)
 	if err != nil {
 		return err
 	}
@@ -79,13 +86,13 @@ func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package,
 	})
 
 	generateMapperInterface(file, config.InterfaceName, mapFuncs, config)
-	generateMapperImplementation(file, config.ImplementationName, mapFuncs, config)
+	generateMapperImplementation(ctx, config.ImplementationName, mapFuncs, config)
 	generateCompileTimeCheck(file, config.InterfaceName, config.ImplementationName)
 
 	return nil
 }
 
-func generateMapperInterface(file *jen.File, name string, mapFuncs []genMapFunc, config Config) {
+func generateMapperInterface(file *jen.File, name string, mapFuncs []genMapFunc, config PackageConfig) {
 	var signatures []jen.Code
 
 	for _, mf := range mapFuncs {
@@ -107,26 +114,20 @@ func generateMapperInterface(file *jen.File, name string, mapFuncs []genMapFunc,
 	file.Type().Id(name).Interface(signatures...).Line().Line()
 }
 
-func generateMapperImplementation(file *jen.File, name string, mapFuncs []genMapFunc, config Config) {
+func generateMapperImplementation(ctx *converterContext, name string, mapFuncs []genMapFunc, config PackageConfig) {
+	file := ctx.JenFile()
 	file.Type().Id(name).Struct().Line()
 
 	for _, mf := range mapFuncs {
 		params, results := mf.paramsAndResults()
 
-		var varCount = 0
 		var body []jen.Code
 		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetType)).Line())
 
 		for _, field := range mf.mappedFields {
 			opt := ConverterOption{}
 
-			before, nextVarCount := field.converter.Before(file, field.targetSymbol, field.sourceSymbol, varCount, opt)
-			if before != nil {
-				body = append(body, before)
-				varCount = nextVarCount
-			}
-
-			assign := field.converter.Assign(file, field.targetSymbol, field.sourceSymbol, opt)
+			assign := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
 			if assign != nil {
 				body = append(body, assign)
 			}
@@ -145,6 +146,8 @@ func generateMapperImplementation(file *jen.File, name string, mapFuncs []genMap
 			Params(results...).
 			Block(body...).
 			Line()
+
+		ctx.resetVarCount()
 	}
 }
 
@@ -154,7 +157,7 @@ func generateCompileTimeCheck(file *jen.File, interfaceName, implName string) {
 	return
 }
 
-func collectMapFuncs(parser Parser, currentPkg *packages.Package, config Config) ([]genMapFunc, error) {
+func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config PackageConfig) ([]genMapFunc, error) {
 	var mapFuncs []genMapFunc
 	for _, cf := range config.Structs {
 		var vars = map[string]string{
@@ -164,13 +167,13 @@ func collectMapFuncs(parser Parser, currentPkg *packages.Package, config Config)
 			Placeholder.SourceStructName:   cf.SourceStructName,
 		}
 
-		targetStruct, ok := parser.FindStruct(replacePlaceholders(cf.TargetPkgPath, vars), cf.TargetStructName)
+		targetStruct, ok := ctx.Parser().FindStruct(replacePlaceholders(cf.TargetPkgPath, vars), cf.TargetStructName)
 		if !ok {
 			// log struct not found
 			continue
 		}
 
-		sourceStruct, ok := parser.FindStruct(replacePlaceholders(cf.SourcePkgPath, vars), cf.SourceStructName)
+		sourceStruct, ok := ctx.Parser().FindStruct(replacePlaceholders(cf.SourcePkgPath, vars), cf.SourceStructName)
 		if !ok {
 			// log source struct not found
 			continue
@@ -209,7 +212,7 @@ func collectMapFuncs(parser Parser, currentPkg *packages.Package, config Config)
 				sourcePointer:    useSourcePointer,
 			}
 
-			fillMapFunc(&mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields)
+			fillMapFunc(ctx, &mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields)
 			mapFuncs = append(mapFuncs, mapFunc)
 		}
 
@@ -232,14 +235,14 @@ func collectMapFuncs(parser Parser, currentPkg *packages.Package, config Config)
 				sourcePointer:    useTargetPointer,
 			}
 
-			fillMapFunc(&mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip())
+			fillMapFunc(ctx, &mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip())
 			mapFuncs = append(mapFuncs, mapFunc)
 		}
 	}
 	return mapFuncs, nil
 }
 
-func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig) {
+func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig) {
 	mappedFields := mapFieldNames(targetFields, sourceFields, config)
 	for target, source := range mappedFields {
 		if source == "" {
@@ -256,7 +259,7 @@ func fillMapFunc(mapFunc *genMapFunc, targetFields, sourceFields map[string]Stru
 			continue
 		}
 
-		converter, ok := FindConverter(ti.Type, si.Type)
+		converter, ok := findConverter(ctx, ti.Type, si.Type)
 		if !ok {
 			mapFunc.unconvertibleField = append(mapFunc.unconvertibleField, target)
 			continue

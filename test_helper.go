@@ -1,6 +1,7 @@
 package gomappergen
 
 import (
+	"context"
 	"fmt"
 	"go/types"
 	"path/filepath"
@@ -24,11 +25,15 @@ type GoldenTestCase struct {
 	SourceFileContents map[string][]byte
 	PklFileContent     []byte
 	GoldenFileContent  map[string][]byte
+	PrintSetup         bool
 	PrintActual        bool
+	PrintDiff          bool
 }
 
 type ConverterTestCase struct {
 	Name                         string
+	AdditionalCode               []string
+	Config                       *Config
 	Imports                      map[string]string
 	GoModGoVersion               string
 	GoModRequires                map[string]string
@@ -36,20 +41,18 @@ type ConverterTestCase struct {
 	TargetType                   string
 	SourceType                   string
 	ConverterOption              ConverterOption
-	CurrentVarCount              int
 	TargetSymbolWithoutFieldName bool
 	SourceSymbolWithoutFieldName bool
 	ExpectedCanConvert           bool
 	ExpectedImports              []string
 	ExpectedCode                 []string
-	ExpectedNextVarCount         int
 	PrintSetUp                   bool
 }
 
 type testHelper struct {
 }
 
-func (h *testHelper) SetupConfig(t *testing.T, lines ...string) (map[string][]Config, error) {
+func (h *testHelper) SetupConfig(t *testing.T, lines ...string) (*Config, error) {
 	dir := setup.SourceCode(t, setup.PklLibFiles(), file.PklDevConfigFile(lines...))
 
 	return ParseConfig(filepath.Join(dir, "dev/config.pkl"))
@@ -63,22 +66,22 @@ func (h *testHelper) Parse(t *testing.T, files []file.File, requires map[string]
 	return DefaultParser(dir)
 }
 
-func (h *testHelper) SetupGoldenTestCaseForPackage(t *testing.T, tc GoldenTestCase, pkgPath string) (Parser, *packages.Package, []Config) {
-	parser, configs := h.SetupGoldenTestCase(t, tc)
+func (h *testHelper) SetupGoldenTestCaseForPackage(t *testing.T, tc GoldenTestCase, pkgPath string) (Parser, *packages.Package, []PackageConfig) {
+	parser, config := h.SetupGoldenTestCase(t, tc)
 
-	config, ok := configs[pkgPath]
+	pkgCf, ok := config.Packages[pkgPath]
 	require.True(t, ok, fmt.Sprintf("there is no config for package %v in pkl file", pkgPath))
 
 	for _, pkg := range parser.SourcePackages() {
 		if pkg.PkgPath == pkgPath {
-			return parser, pkg, config
+			return parser, pkg, pkgCf
 		}
 	}
 	panic(fmt.Sprintf("package %v not found", pkgPath))
 }
 
-func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parser, map[string][]Config) {
-	configs, err := Test.SetupConfig(t, string(tc.PklFileContent))
+func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parser, *Config) {
+	config, err := Test.SetupConfig(t, string(tc.PklFileContent))
 	require.NoError(t, err, "cannot set up pkl config file")
 
 	goMod := &file.GoMod{
@@ -94,22 +97,32 @@ func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parse
 		sourceFiles = append(sourceFiles, file.New(filePath, fileContent))
 	}
 
+	if tc.PrintSetup {
+		for _, f := range sourceFiles {
+			util.PrintFile(f.FilePath(), f.FileContent())
+		}
+		for p, c := range tc.GoldenFileContent {
+			util.PrintFile("golden-file: "+p, c)
+		}
+	}
+
 	parser, err := Test.Parse(t, sourceFiles, goMod.Requires)
 	require.NoError(t, err, "cannot parse source files")
-	return parser, configs
+	return parser, config
 }
 
 func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
-	parser, pkgConfigs := h.SetupGoldenTestCase(t, tc)
+	parser, config := h.SetupGoldenTestCase(t, tc)
 
-	RegisterAllBuiltinConverters()
+	RegisterBuiltinConverters(config.BuiltInConverters)
+	InitAllRegisteredConverters(parser, *config)
 
 	outputs := make(map[string]string)
 	fm := defaultFileManager("test")
 
 	for _, pkg := range parser.SourcePackages() {
 		pkgPath := pkg.PkgPath
-		configs, have := pkgConfigs[pkgPath]
+		configs, have := config.Packages[pkgPath]
 		if !have {
 			continue
 		}
@@ -127,8 +140,12 @@ func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
 			assert.Failf(t, "expected file %v not found in outputs", fileName)
 		}
 		if tc.PrintActual {
-			fmt.Println("file: ", fileName)
-			fmt.Println(output)
+			util.PrintGeneratedFile(fileName, []byte(output))
+		}
+
+		if tc.PrintDiff {
+			fmt.Println(util.ColorGreen(fileName))
+			util.PrintDiff("expected", expected, "output", []byte(output))
 		}
 		assert.Equal(t, string(expected), output, "generated file content %v does not match golden file", fileName)
 	}
@@ -165,6 +182,10 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 	codeFile.Lines = append(codeFile.Lines, "}")
 	codeFile.Lines = append(codeFile.Lines, "")
 
+	for _, l := range tc.AdditionalCode {
+		codeFile.Lines = append(codeFile.Lines, l)
+	}
+
 	dir := setup.SourceCode(t, []file.File{goMod, codeFile})
 	if len(tc.GoModRequires) != 0 {
 		setup.RunGoModTidy(t, dir)
@@ -172,6 +193,10 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 
 	parser, err := DefaultParser(dir)
 	require.NoError(t, err)
+
+	if tc.Config != nil {
+		converter.Init(parser, *tc.Config)
+	}
 
 	var pkg *packages.Package
 	for _, v := range parser.SourcePackages() {
@@ -196,8 +221,21 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 	require.False(t, isInvalidType(targetFieldInfo.Type), "Target type is invalid, use Imports and GoModRequires to import the package")
 	require.False(t, isInvalidType(sourceFieldInfo.Type), "Source type is invalid, use Imports and GoModRequires to import the package")
 
+	jf := jen.NewFilePathName(goMod.GetModule(), "test")
+	ctx := &converterContext{
+		Context: context.Background(),
+		jenFile: jf,
+		parser:  parser,
+		logger:  nil,
+	}
+
+	if tc.PrintSetUp {
+		util.PrintFile(goMod.FilePath(), goMod.FileContent())
+		util.PrintFile(codeFile.FilePath(), codeFile.FileContent())
+	}
+
 	if !tc.ExpectedCanConvert {
-		var expected = converter.CanConvert(targetFieldInfo.Type, sourceFieldInfo.Type)
+		var expected = converter.CanConvert(ctx, targetFieldInfo.Type, sourceFieldInfo.Type)
 		assert.Equal(t, false, expected, "CanConvert should returns false but returns true")
 		return
 	}
@@ -218,8 +256,6 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 		sourceSymbol.VarName = "source"
 	}
 
-	jf := jen.NewFilePathName(goMod.GetModule(), "test")
-
 	var blocks []jen.Code
 	if tc.TargetSymbolWithoutFieldName {
 		blocks = append(blocks, jen.Var().Id("target").Add(GeneratorUtil.TypeToJenCode(targetFieldInfo.Type)))
@@ -228,13 +264,7 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 		blocks = append(blocks, jen.Id("source").Op(":=").Id("in").Dot("sourceField"))
 	}
 
-	bc, nvc := converter.Before(jf, targetSymbol, sourceSymbol, tc.CurrentVarCount, tc.ConverterOption)
-	if bc != nil {
-		blocks = append(blocks, bc)
-	}
-	assert.Equal(t, tc.ExpectedNextVarCount, nvc)
-
-	c := converter.Assign(jf, targetSymbol, sourceSymbol, tc.ConverterOption)
+	c := converter.ConvertField(ctx, targetSymbol, sourceSymbol, tc.ConverterOption)
 	if c != nil {
 		blocks = append(blocks, c)
 	}
@@ -283,25 +313,7 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 	assert.Equal(t, strings.Join(expected, "\n"), output)
 
 	if tc.PrintSetUp {
-		fmt.Println(util.ColorBlue("--- file: " + goMod.FilePath()))
-		fmt.Print(string(goMod.FileContent()))
-		fmt.Println(util.ColorBlue("--- end file: " + goMod.FilePath()))
-		fmt.Println()
-
-		fmt.Println(util.ColorBlue("--- file: " + codeFile.FilePath()))
-		fmt.Print(string(codeFile.FileContent()))
-		fmt.Println(util.ColorBlue("--- end file: " + codeFile.FilePath()))
-		fmt.Println()
-
-		fmt.Println(util.ColorBlue("--- expected code"))
-		fmt.Println(strings.Join(expected, "\n"))
-		fmt.Println(util.ColorBlue("--- end expected code"))
-		fmt.Println()
-
-		fmt.Println(util.ColorBlue("--- generated code"))
-		fmt.Println(output)
-		fmt.Println(util.ColorBlue("--- end generated code"))
-		fmt.Println()
+		util.PrintDiff("expected", []byte(strings.Join(expected, "\n")), "generated", []byte(output))
 	}
 }
 

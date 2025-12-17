@@ -73,8 +73,8 @@ type expectedStruct struct {
 	GenerateSourceFromTarget *bool
 }
 
-func buildConfig(override *expectedConfig, structs ...expectedStruct) Config {
-	defaultCf := Config{
+func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageConfig {
+	defaultCf := PackageConfig{
 		Output:                 Default.Output,
 		InterfaceName:          Default.InterfaceName,
 		ImplementationName:     Default.ImplementationName,
@@ -168,7 +168,7 @@ func TestParseConfig(t *testing.T) {
 	cases := []struct {
 		name     string
 		config   []string
-		expected map[string][]Config
+		expected map[string][]PackageConfig
 	}{
 		{
 			name: "empty config",
@@ -179,7 +179,7 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string][]Config{},
+			expected: map[string][]PackageConfig{},
 		},
 
 		{
@@ -194,7 +194,7 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string][]Config{
+			expected: map[string][]PackageConfig{
 				"github.com/example/repo": {
 					buildConfig(nil, expectedStruct{
 						TargetStructName: "Target",
@@ -217,7 +217,7 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string][]Config{
+			expected: map[string][]PackageConfig{
 				"github.com/example/repo": {
 					buildConfig(nil, expectedStruct{
 						TargetStructName: "Target",
@@ -244,7 +244,7 @@ func TestParseConfig(t *testing.T) {
 				`	}`,
 				`}`,
 			},
-			expected: map[string][]Config{
+			expected: map[string][]PackageConfig{
 				"github.com/example/repo": {
 					buildConfig(nil, expectedStruct{
 						TargetStructName: "Target",
@@ -264,9 +264,38 @@ func TestParseConfig(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := setup.SourceCode(t, setup.PklLibFiles(), file.PklDevConfigFile(tc.config...))
-			result, err := ParseConfig(filepath.Join(dir, "dev/config.pkl"))
+			config, err := ParseConfig(filepath.Join(dir, "dev/config.pkl"))
+			result := config.Packages
 
 			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func Test_parseConverterFunctionConfigFromString(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		expected ConvertFunctionConfig
+	}{
+		{
+			name:     "standard type: time.Time",
+			input:    "time.Time",
+			expected: ConvertFunctionConfig{PackagePath: "time", TypeName: "Time"},
+		},
+
+		{
+			name:     "import type: github.com/toniphan21/go-mapper-gen.Type",
+			input:    "github.com/toniphan21/go-mapper-gen.Type",
+			expected: ConvertFunctionConfig{PackagePath: "github.com/toniphan21/go-mapper-gen", TypeName: "Type"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := parseConverterFunctionConfigFromString(tc.input)
+
 			assert.Equal(t, tc.expected, result)
 		})
 	}

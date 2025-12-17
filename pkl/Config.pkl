@@ -13,25 +13,19 @@ class Output {
 
 open class Base {
   output: Output?
-  convert_functions: Listing<ConvertFunc>?
 }
 
-class Func {
-  pkg: String
-  func: String
-  var_name: String?
+class BuiltInConverter {
+  enable_identical: Boolean = true
+  enable_slice: Boolean = true
+  enable_type_to_pointer: Boolean = true
+  enable_pointer_to_type: Boolean = true
+  enable_functions: Boolean = true
 }
 
-class Type {
-  pkg: String
-  type: String
-  pointer: Boolean = false
-}
-
-class ConvertFunc {
-  target: Type | String
-  source: Type | String
-  convert_by: Func | String
+class Converter {
+  built_in: BuiltInConverter = new BuiltInConverter {}
+  functions: Listing<String>?
 }
 
 class Fields {
@@ -89,5 +83,7 @@ all: Base = new Base {
     test_file_name = "gen_mapper_test.go"
   }
 }
+
+converter: Converter = new Converter {}
 
 packages: Mapping<PackagePath, Mapper>

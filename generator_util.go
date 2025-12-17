@@ -1,7 +1,6 @@
 package gomappergen
 
 import (
-	"fmt"
 	"go/types"
 	"strconv"
 	"strings"
@@ -12,16 +11,6 @@ import (
 const CommentWidth = 80
 
 type genUtil struct {
-}
-
-func (g *genUtil) GenerateWithConverterOption(code jen.Code, opt ConverterOption, converterName string) jen.Code {
-	if opt.EmitTraceComments {
-		out := jen.Comment(fmt.Sprintf("%s generated code start", converterName)).Line()
-		out.Add(code).Line()
-		out.Add(jen.Comment(fmt.Sprintf("%s generated code end", converterName)))
-		return out
-	}
-	return code
 }
 
 func (g *genUtil) TypeToJenCode(t types.Type) jen.Code {

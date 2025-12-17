@@ -1,0 +1,23 @@
+
+converter {
+  built_in {
+    enable_type_to_pointer = true
+  }
+
+  functions {
+    "github.com/toniphan21/go-mapper-gen/golden.MyIDToString"
+    "github.com/toniphan21/go-mapper-gen/golden.StringToMyID"
+  }
+}
+
+packages {
+  ["github.com/toniphan21/go-mapper-gen/golden"] {
+    source_pkg = "{CurrentPackage}"
+
+    structs {
+      ["ConverterFuncTarget"] { source_struct_name = "ConverterFuncSource" }
+      ["ConverterFuncTargetPointer"] { source_struct_name = "ConverterFuncSource" }
+      ["ConverterFuncTargetSlice"] { source_struct_name = "ConverterFuncSourceSlice" }
+    }
+  }
+}

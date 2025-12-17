@@ -17,7 +17,9 @@ func TestGolden(t *testing.T) {
 		pklFile        string
 		goldenFile     string
 		outputFileName string
+		printSetup     bool
 		printActual    bool
+		printDiff      bool
 	}{
 		{
 			name:        "same-pkg: basic configurations",
@@ -33,6 +35,15 @@ func TestGolden(t *testing.T) {
 			sourceFiles: map[string]string{"code.go": "same-pkg/multiple-mappers.go"},
 			pklFile:     "same-pkg/multiple-mappers.pkl",
 			goldenFile:  "same-pkg/multiple-mappers.golden",
+		},
+
+		{
+			name:        "same-pkg: use converter functions",
+			goModModule: "github.com/toniphan21/go-mapper-gen/golden",
+			sourceFiles: map[string]string{"code.go": "same-pkg/use-converter-functions.go"},
+			pklFile:     "same-pkg/use-converter-functions.pkl",
+			goldenFile:  "same-pkg/use-converter-functions.golden",
+			printActual: true,
 		},
 
 		{
@@ -72,9 +83,12 @@ func TestGolden(t *testing.T) {
 			if tc.outputFileName != "" {
 				outputFileName = tc.outputFileName
 			}
-			tc := GoldenTestCase{
+
+			Test.RunGoldenTestCase(t, GoldenTestCase{
 				Name:               tc.name,
+				PrintSetup:         tc.printSetup,
 				PrintActual:        tc.printActual,
+				PrintDiff:          tc.printDiff,
 				GoModGoVersion:     tc.goModGoVersion,
 				GoModRequires:      tc.goModRequires,
 				GoModModule:        tc.goModModule,
@@ -83,8 +97,7 @@ func TestGolden(t *testing.T) {
 				GoldenFileContent: map[string][]byte{
 					outputFileName: file.ContentFromTestData(tc.goldenFile),
 				},
-			}
-			Test.RunGoldenTestCase(t, tc)
+			})
 		})
 	}
 }

@@ -9,14 +9,14 @@ import (
 
 const BinaryName = "github.com/toniphan21/go-mapper-gen"
 
-var version = "0.1.0"
+var version = "v0.1.0"
 
 func Version() string {
 	return version
 }
 
 type FileManager interface {
-	MakeJenFile(currentPkg *packages.Package, config Config) *jen.File
+	MakeJenFile(currentPkg *packages.Package, config PackageConfig) *jen.File
 
 	JenFiles() map[string]*jen.File
 }
@@ -41,7 +41,7 @@ func (fm *fileManagerImpl) JenFiles() map[string]*jen.File {
 	return fm.files
 }
 
-func (fm *fileManagerImpl) MakeJenFile(currentPkg *packages.Package, config Config) *jen.File {
+func (fm *fileManagerImpl) MakeJenFile(currentPkg *packages.Package, config PackageConfig) *jen.File {
 	v, have := fm.files[config.Output.FileName]
 	if have {
 		return v

@@ -18,10 +18,19 @@ type StructFieldInfo struct {
 	Index int
 }
 
+type FuncInfo struct {
+	Name        string
+	PackagePath string
+	Params      []types.Type
+	Results     []types.Type
+}
+
 type Parser interface {
 	SourcePackages() []*packages.Package
 
 	FindStruct(pkgPath string, name string) (StructInfo, bool)
+
+	FindFunction(pkgPath string, name string) (FuncInfo, bool)
 }
 
 func DefaultParser(dir string) (Parser, error) {
@@ -47,6 +56,10 @@ type parserImpl struct {
 	sourcePackages []*packages.Package
 }
 
+func (p *parserImpl) SourcePackages() []*packages.Package {
+	return p.sourcePackages
+}
+
 func (p *parserImpl) FindStruct(pkgPath string, name string) (StructInfo, bool) {
 	for _, pkg := range p.sourcePackages {
 		if pkg.PkgPath == pkgPath {
@@ -65,6 +78,26 @@ func (p *parserImpl) FindStruct(pkgPath string, name string) (StructInfo, bool) 
 		}
 	}
 	return StructInfo{}, false
+}
+
+func (p *parserImpl) FindFunction(pkgPath string, name string) (FuncInfo, bool) {
+	for _, pkg := range p.sourcePackages {
+		if pkg.PkgPath == pkgPath {
+			return p.findFunctionFromPkg(pkg, name)
+		}
+	}
+
+	pkgs, err := packages.Load(p.config, pkgPath)
+	if err != nil {
+		return FuncInfo{}, false
+	}
+
+	for _, pkg := range pkgs {
+		if pkg.PkgPath == pkgPath && len(pkg.Errors) == 0 {
+			return p.findFunctionFromPkg(pkg, name)
+		}
+	}
+	return FuncInfo{}, false
 }
 
 func (p *parserImpl) findStructFromPkg(pkg *packages.Package, name string) (StructInfo, bool) {
@@ -161,8 +194,44 @@ func (p *parserImpl) structFields(pkg *packages.Package, st *ast.StructType) map
 	return fields
 }
 
-func (p *parserImpl) SourcePackages() []*packages.Package {
-	return p.sourcePackages
+func (p *parserImpl) findFunctionFromPkg(pkg *packages.Package, name string) (FuncInfo, bool) {
+	scope := pkg.Types.Scope()
+	obj := scope.Lookup(name)
+
+	if obj == nil {
+		return FuncInfo{}, false
+	}
+
+	fn, ok := obj.(*types.Func)
+	if !ok {
+		return FuncInfo{}, false
+	}
+
+	signature, ok := fn.Type().(*types.Signature)
+	if !ok {
+		return FuncInfo{}, false
+	}
+
+	getTypesFromTuple := func(tup *types.Tuple) []types.Type {
+		if tup == nil {
+			return nil
+		}
+		var typeList []types.Type
+		for i := 0; i < tup.Len(); i++ {
+			typeList = append(typeList, tup.At(i).Type())
+		}
+		return typeList
+	}
+
+	params := getTypesFromTuple(signature.Params())
+	results := getTypesFromTuple(signature.Results())
+
+	return FuncInfo{
+		Name:        fn.Name(),
+		PackagePath: pkg.PkgPath,
+		Params:      params,
+		Results:     results,
+	}, true
 }
 
 var _ Parser = (*parserImpl)(nil)

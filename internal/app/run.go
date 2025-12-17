@@ -28,17 +28,12 @@ func RunCLI() {
 	cff := filepath.Join(wd, configFileName)
 	slog.Info(util.ColorGreen(appName) + " uses configuration file: " + util.ColorCyan(cff))
 
-	pkgConfigs, err := gen.ParseConfig(cff)
+	parsedConfig, err := gen.ParseConfig(cff)
 	if err != nil {
 		slog.Error(util.ColorRed("failed to load configuration file."))
 		slog.Error(util.ColorRed(err.Error()))
 		os.Exit(1)
 	}
-
-	gen.RegisterAllBuiltinConverters()
-
-	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
-	gen.PrintRegisteredConverters(logger)
 
 	fm := gen.DefaultFileManager()
 	parser, err := gen.DefaultParser(wd)
@@ -46,9 +41,16 @@ func RunCLI() {
 		slog.Error(util.ColorRed("failed to parse source code."))
 	}
 
+	gen.RegisterBuiltinConverters(parsedConfig.BuiltInConverters)
+
+	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
+	gen.PrintRegisteredConverters(logger)
+
+	gen.InitAllRegisteredConverters(parser, *parsedConfig)
+
 	for _, pkg := range parser.SourcePackages() {
 		pkgPath := pkg.PkgPath
-		configs, have := pkgConfigs[pkgPath]
+		configs, have := parsedConfig.Packages[pkgPath]
 		if !have {
 			continue
 		}

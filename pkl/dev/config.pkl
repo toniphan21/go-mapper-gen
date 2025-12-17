@@ -2,25 +2,16 @@ amends ".../Config.pkl"
 
 all {
   output { file_name = "mycode.go" }
+}
 
-  convert_functions {
-    new {
-      target { pkg = "" type = "string" pointer = true }
-      source { pkg = "pgtype" type = "Text" }
-      convert_by { pkg = "" func = "" }
-    }
+converter {
+  built_in {
+    enable_type_to_pointer = true
+  }
 
-    new {
-      target = "github.com/jackc/pgx/v5/pgtype.Text"
-      source = "*string"
-      convert_by = "github.com/toniphan21/pgx-mapper.NilableStringToText"
-    }
-
-    new {
-      target = "*string"
-      source = "github.com/jackc/pgx/v5/pgtype.Text"
-      convert_by = "github.com/toniphan21/pgx-mapper.TextToNilableString"
-    }
+  functions {
+    "github.com/toniphan21/pgx-mapper.NilableStringToText"
+    "github.com/toniphan21/pgx-mapper.TextToNilableString"
   }
 }
 
