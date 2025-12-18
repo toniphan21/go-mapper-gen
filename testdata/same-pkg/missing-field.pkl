@@ -1,0 +1,10 @@
+
+packages {
+  ["github.com/toniphan21/go-mapper-gen/golden"] {
+    source_pkg = "{CurrentPackage}"
+
+    structs {
+      ["MissingFieldTarget"] { source_struct_name = "MissingFieldSource" }
+    }
+  }
+}

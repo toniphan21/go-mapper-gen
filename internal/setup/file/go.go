@@ -61,6 +61,22 @@ func (g GoMod) FileContent() []byte {
 	return []byte(strings.Join(lines, "\n"))
 }
 
+type GoSum struct {
+	Lines []string
+}
+
+func (g *GoSum) FilePath() string {
+	return "go.sum"
+}
+
+func (g *GoSum) FileContent() []byte {
+	if g.Lines == nil {
+		return []byte("")
+	}
+	return []byte(strings.Join(g.Lines, "\n"))
+}
+
 var _ File = (*Go)(nil)
 var _ File = (*GoMod)(nil)
+var _ File = (*GoSum)(nil)
 var _ File = (*Pkl)(nil)

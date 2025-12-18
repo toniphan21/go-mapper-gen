@@ -108,8 +108,6 @@ func Test_functionsConverter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
-
 			registerConverter(&identicalTypeConverter{}, 0, true)
 			registerConverter(&sliceConverter{}, 1, true)
 			registerConverter(&typeToPointerConverter{}, 2, true)

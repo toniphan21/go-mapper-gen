@@ -1,11 +1,12 @@
-package domain
+package grpc
 
 import "time"
 
 type User struct {
-	Name      string
 	ID        string
-	Age       int
+	Age       int32
+	LastName  string
+	FirstName string
 	Email     string
 	UpdatedAt time.Time
 	CreatedAt time.Time

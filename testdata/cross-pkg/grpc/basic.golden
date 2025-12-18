@@ -12,6 +12,10 @@ type iMapper interface {
 	FromUserMessage(in UserMessage) domain.User
 }
 
+func new_iMapper() iMapper {
+	return &iMapperImpl{}
+}
+
 type iMapperImpl struct{}
 
 func (m *iMapperImpl) ToUserMessage(in domain.User) UserMessage {

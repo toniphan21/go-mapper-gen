@@ -68,8 +68,8 @@ func (c *functionsConverter) CanConvert(ctx ConverterContext, targetType, source
 
 func (c *functionsConverter) matchFuncConverter(ctx ConverterContext, targetType, sourceType types.Type) funcConverterMatch {
 	for _, fn := range c.availableFunctions {
-		identicalTarget := types.Identical(fn.targetType, targetType)
-		identicalSource := types.Identical(fn.sourceType, sourceType)
+		identicalTarget := TypeUtil.IsIdentical(fn.targetType, targetType)
+		identicalSource := TypeUtil.IsIdentical(fn.sourceType, sourceType)
 
 		if identicalTarget && identicalSource {
 			return funcConverterMatch{fn: &fn}

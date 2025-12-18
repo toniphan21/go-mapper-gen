@@ -54,6 +54,7 @@ type expectedConfig struct {
 	ImplementationName     *string
 	ConstructorName        *string
 	DecoratorInterfaceName *string
+	DecoratorNoOpName      *string
 	GenerateGoDoc          *bool
 }
 
@@ -80,6 +81,7 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageCon
 		ImplementationName:     Default.ImplementationName,
 		ConstructorName:        Default.ConstructorName,
 		DecoratorInterfaceName: Default.DecoratorInterfaceName,
+		DecoratorNoOpName:      Default.DecoratorNoOpName,
 		GenerateGoDoc:          true,
 		Structs:                nil,
 	}
@@ -104,6 +106,9 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageCon
 		}
 		if override.DecoratorInterfaceName != nil {
 			result.DecoratorInterfaceName = *override.DecoratorInterfaceName
+		}
+		if override.DecoratorNoOpName != nil {
+			result.DecoratorNoOpName = *override.DecoratorNoOpName
 		}
 		if override.GenerateGoDoc != nil {
 			result.GenerateGoDoc = *override.GenerateGoDoc

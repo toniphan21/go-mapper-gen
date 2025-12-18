@@ -25,7 +25,7 @@ func (c *identicalTypeConverter) Info() ConverterInfo {
 }
 
 func (c *identicalTypeConverter) CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool {
-	return types.Identical(targetType, sourceType)
+	return TypeUtil.IsIdentical(targetType, sourceType)
 }
 
 func (c *identicalTypeConverter) ConvertField(ctx ConverterContext, target, source Symbol, opt ConverterOption) jen.Code {

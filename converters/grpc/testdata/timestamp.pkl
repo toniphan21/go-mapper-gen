@@ -1,0 +1,9 @@
+packages {
+  ["github.com/toniphan21/go-mapper-gen/golden"] {
+    source_pkg = "github.com/toniphan21/gmg-lib/gen/go/iam/v1"
+
+    structs {
+      ["User"] { source_struct_name = "User" }
+    }
+  }
+}

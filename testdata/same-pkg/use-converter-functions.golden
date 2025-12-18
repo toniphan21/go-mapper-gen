@@ -28,6 +28,10 @@ type iMapper interface {
 	FromConverterFuncTargetSlice(in ConverterFuncTargetSlice) ConverterFuncSourceSlice
 }
 
+func new_iMapper() iMapper {
+	return &iMapperImpl{}
+}
+
 type iMapperImpl struct{}
 
 func (m *iMapperImpl) ToConverterFuncTarget(in ConverterFuncSource) ConverterFuncTarget {

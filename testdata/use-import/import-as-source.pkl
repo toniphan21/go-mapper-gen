@@ -1,7 +1,10 @@
 packages {
   ["github.com/toniphan21/go-mapper-gen/golden"] {
     interface_name = "iMapperImportAsSource"
+    constructor_name = "new_iMapperImportAsSource"
     implementation_name = "iMapperImportAsSourceImpl"
+    decorator_interface_name = "iMapperImportAsSourceDecorator"
+    decorator_noop_name = "iMapperImportAsSourceDecoratorNoOp"
     source_pkg = "github.com/toniphan21/gmg-lib"
 
     structs {

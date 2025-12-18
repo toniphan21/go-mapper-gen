@@ -46,6 +46,7 @@ type PackageConfig struct {
 	ImplementationName     string
 	ConstructorName        string
 	DecoratorInterfaceName string
+	DecoratorNoOpName      string
 	Structs                []StructConfig
 	GenerateGoDoc          bool
 }
@@ -113,6 +114,7 @@ type defaultCfValue struct {
 	SourceToTargetFuncName   string
 	SourceFromTargetFuncName string
 	DecoratorInterfaceName   string
+	DecoratorNoOpName        string
 	DecorateFuncName         string
 	TargetPkgPath            string
 }
@@ -145,6 +147,7 @@ var Default = defaultCfValue{
 	SourceToTargetFuncName:   "To{TargetStructName}",
 	SourceFromTargetFuncName: "From{TargetStructName}",
 	DecoratorInterfaceName:   "iMapperDecorator",
+	DecoratorNoOpName:        "iMapperDecoratorNoOp",
 	DecorateFuncName:         "decorate{FunctionName}",
 	TargetPkgPath:            Placeholder.CurrentPackage,
 }
@@ -252,6 +255,7 @@ func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Package
 		ImplementationName:     cf.GetImplementationName(),
 		ConstructorName:        cf.GetConstructorName(),
 		DecoratorInterfaceName: cf.GetDecoratorInterfaceName(),
+		DecoratorNoOpName:      cf.GetDecoratorNoopName(),
 		GenerateGoDoc:          cf.GetGenerateGoDoc(),
 	}
 

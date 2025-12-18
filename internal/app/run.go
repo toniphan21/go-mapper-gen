@@ -41,6 +41,7 @@ func RunCLI() {
 		slog.Error(util.ColorRed("failed to parse source code."))
 	}
 
+	gen.ClearAllRegisteredConverters()
 	gen.RegisterBuiltinConverters(parsedConfig.BuiltInConverters)
 
 	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")

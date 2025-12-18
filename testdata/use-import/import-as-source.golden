@@ -12,15 +12,21 @@ type iMapperImportAsSource interface {
 	FromUser(in User) gmglib.User
 }
 
+func new_iMapperImportAsSource() iMapperImportAsSource {
+	return &iMapperImportAsSourceImpl{}
+}
+
 type iMapperImportAsSourceImpl struct{}
 
 func (m *iMapperImportAsSourceImpl) ToUser(in gmglib.User) User {
 	var out User
 
-	out.ID = in.ID
 	out.Name = in.Name
-	out.Email = in.Email
+	out.ID = in.ID
 	out.Age = in.Age
+	out.Email = in.Email
+	out.UpdatedAt = in.UpdatedAt
+	out.CreatedAt = in.CreatedAt
 
 	return out
 }
@@ -32,6 +38,8 @@ func (m *iMapperImportAsSourceImpl) FromUser(in User) gmglib.User {
 	out.Name = in.Name
 	out.Email = in.Email
 	out.Age = in.Age
+	out.CreatedAt = in.CreatedAt
+	out.UpdatedAt = in.UpdatedAt
 
 	return out
 }

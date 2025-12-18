@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go/types"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -22,12 +23,69 @@ type GoldenTestCase struct {
 	GoModGoVersion     string
 	GoModRequires      map[string]string
 	GoModModule        string
+	GoSum              []string
 	SourceFileContents map[string][]byte
 	PklFileContent     []byte
 	GoldenFileContent  map[string][]byte
 	PrintSetup         bool
 	PrintActual        bool
 	PrintDiff          bool
+}
+
+type GoldenTestCaseFromTestData struct {
+	Name           string
+	PkgPath        string
+	GoModGoVersion string
+	GoModRequires  map[string]string
+	GoModModule    string
+	GoSum          []string
+	SourceFiles    map[string]string
+	PklFile        string
+	GoldenFile     string
+	OutputFileName string
+	PrintSetup     bool
+	PrintActual    bool
+	PrintDiff      bool
+}
+
+func (g *GoldenTestCaseFromTestData) ToGoldenTestCase() GoldenTestCase {
+	sourceFiles := make(map[string][]byte)
+	for k, v := range g.SourceFiles {
+		sourceFiles[k] = Test.ContentFromTestData(v)
+	}
+
+	outputFileName := Default.Output.FileName
+	if g.OutputFileName != "" {
+		outputFileName = g.OutputFileName
+	}
+
+	return GoldenTestCase{
+		Name:               g.Name,
+		PrintSetup:         g.PrintSetup,
+		PrintActual:        g.PrintActual,
+		PrintDiff:          g.PrintDiff,
+		GoModGoVersion:     g.GoModGoVersion,
+		GoModRequires:      g.GoModRequires,
+		GoModModule:        g.GoModModule,
+		GoSum:              g.GoSum,
+		SourceFileContents: sourceFiles,
+		PklFileContent:     Test.ContentFromTestData(g.PklFile),
+		GoldenFileContent: map[string][]byte{
+			outputFileName: Test.ContentFromTestData(g.GoldenFile),
+		},
+	}
+}
+
+type GoldenTestCaseRunOptions struct {
+	SetupConverter func()
+}
+
+type GoldenTestCaseRunOptionsFunc func(opts *GoldenTestCaseRunOptions)
+
+func TestWithSetupConverter(fn func()) GoldenTestCaseRunOptionsFunc {
+	return func(opts *GoldenTestCaseRunOptions) {
+		opts.SetupConverter = fn
+	}
 }
 
 type ConverterTestCase struct {
@@ -93,6 +151,11 @@ func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parse
 	var sourceFiles []file.File
 	sourceFiles = append(sourceFiles, goMod)
 
+	if tc.GoSum != nil {
+		goSum := &file.GoSum{Lines: tc.GoSum}
+		sourceFiles = append(sourceFiles, goSum)
+	}
+
 	for filePath, fileContent := range tc.SourceFileContents {
 		sourceFiles = append(sourceFiles, file.New(filePath, fileContent))
 	}
@@ -111,11 +174,21 @@ func (h *testHelper) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parse
 	return parser, config
 }
 
-func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
+func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase, opts ...GoldenTestCaseRunOptionsFunc) {
 	parser, config := h.SetupGoldenTestCase(t, tc)
 
-	RegisterBuiltinConverters(config.BuiltInConverters)
-	InitAllRegisteredConverters(parser, *config)
+	o := GoldenTestCaseRunOptions{
+		SetupConverter: func() {
+			ClearAllRegisteredConverters()
+			RegisterBuiltinConverters(config.BuiltInConverters)
+			InitAllRegisteredConverters(parser, *config)
+		},
+	}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	o.SetupConverter()
 
 	outputs := make(map[string]string)
 	fm := defaultFileManager("test")
@@ -137,7 +210,7 @@ func (h *testHelper) RunGoldenTestCase(t *testing.T, tc GoldenTestCase) {
 	for fileName, expected := range tc.GoldenFileContent {
 		output, have := outputs[fileName]
 		if !have {
-			assert.Failf(t, "expected file %v not found in outputs", fileName)
+			assert.Failf(t, "output file not found", "expected file %v not found in outputs", fileName)
 		}
 		if tc.PrintActual {
 			util.PrintGeneratedFile(fileName, []byte(output))
@@ -315,6 +388,20 @@ func (h *testHelper) RunConverterTestCase(t *testing.T, tc ConverterTestCase, co
 	if tc.PrintSetUp {
 		util.PrintDiff("expected", []byte(strings.Join(expected, "\n")), "generated", []byte(output))
 	}
+}
+
+func (h *testHelper) ContentFromTestData(elem ...string) []byte {
+	elems := []string{"testdata"}
+	elems = append(elems, elem...)
+	c, err := os.ReadFile(filepath.Join(elems...))
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+func (h *testHelper) ContentLines(lines ...string) []byte {
+	return []byte(strings.Join(lines, "\n"))
 }
 
 var Test = &testHelper{}

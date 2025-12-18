@@ -78,8 +78,6 @@ func Test_typeToPointerConverter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
-
 			converter := &typeToPointerConverter{}
 			Test.RunConverterTestCase(t, tc, converter)
 		})
@@ -184,8 +182,6 @@ func Test_pointerToTypeConverter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
-
 			converter := &pointerToTypeConverter{}
 			Test.RunConverterTestCase(t, tc, converter)
 		})
@@ -308,8 +304,6 @@ func Test_sliceConverter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
-
 			converter := &sliceConverter{}
 			registerConverter(&identicalTypeConverter{}, 0, true)
 			registerConverter(&typeToPointerConverter{}, 1, true)

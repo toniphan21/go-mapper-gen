@@ -16,6 +16,8 @@ type BaseMapper interface {
 
 	GetDecoratorInterfaceName() string
 
+	GetDecoratorNoopName() string
+
 	GetDecorateFunctionName() string
 
 	GetTargetPkg() string
@@ -43,6 +45,8 @@ type BaseMapperImpl struct {
 	SourceFromTargetFunctionName string `pkl:"source_from_target_function_name"`
 
 	DecoratorInterfaceName string `pkl:"decorator_interface_name"`
+
+	DecoratorNoopName string `pkl:"decorator_noop_name"`
 
 	DecorateFunctionName string `pkl:"decorate_function_name"`
 
@@ -77,6 +81,10 @@ func (rcv BaseMapperImpl) GetSourceFromTargetFunctionName() string {
 
 func (rcv BaseMapperImpl) GetDecoratorInterfaceName() string {
 	return rcv.DecoratorInterfaceName
+}
+
+func (rcv BaseMapperImpl) GetDecoratorNoopName() string {
+	return rcv.DecoratorNoopName
 }
 
 func (rcv BaseMapperImpl) GetDecorateFunctionName() string {

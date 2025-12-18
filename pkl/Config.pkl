@@ -62,6 +62,7 @@ open class BaseMapper extends Base {
   source_from_target_function_name: String = "From{TargetStructName}"
 
   decorator_interface_name: String = "iMapperDecorator"
+  decorator_noop_name: String = "iMapperDecoratorNoOp"
   decorate_function_name: String = "decorate{FunctionName}"
 
   target_pkg: String = "{CurrentPackage}"

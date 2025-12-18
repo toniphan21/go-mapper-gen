@@ -41,6 +41,10 @@ type iMapperIdentical interface {
 	FromTargetWithoutTo(in Target) Source
 }
 
+func new_iMapperIdentical() iMapperIdentical {
+	return &iMapperIdenticalImpl{}
+}
+
 type iMapperIdenticalImpl struct{}
 
 func (m *iMapperIdenticalImpl) ToIdenticalTarget(in IdenticalSource) IdenticalTarget {

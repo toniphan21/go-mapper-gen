@@ -294,6 +294,10 @@ func RegisterConverter(converter Converter, priority int) {
 	registerConverter(converter, priority, false)
 }
 
+func RegisteredConverterCount() int {
+	return len(converters)
+}
+
 func PrintRegisteredConverters(logger *slog.Logger) {
 	shortFormBuffer := 0
 	for _, c := range converters {
@@ -321,6 +325,10 @@ func PrintRegisteredConverters(logger *slog.Logger) {
 			),
 		)
 	}
+}
+
+func ClearAllRegisteredConverters() {
+	converters = []*registeredConverter{}
 }
 
 func RegisterAllBuiltinConverters() {

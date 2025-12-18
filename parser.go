@@ -1,6 +1,7 @@
 package gomappergen
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
@@ -14,8 +15,10 @@ type StructInfo struct {
 }
 
 type StructFieldInfo struct {
-	Type  types.Type
-	Index int
+	Name       string
+	Type       types.Type
+	Index      int
+	IsExported bool
 }
 
 type FuncInfo struct {
@@ -73,6 +76,8 @@ func (p *parserImpl) FindStruct(pkgPath string, name string) (StructInfo, bool) 
 	}
 
 	for _, pkg := range pkgs {
+		fmt.Println(pkg.Errors)
+
 		if pkg.PkgPath == pkgPath && len(pkg.Errors) == 0 {
 			return p.findStructFromPkg(pkg, name)
 		}
@@ -174,9 +179,14 @@ func (p *parserImpl) structFields(pkg *packages.Package, st *ast.StructType) map
 	for idx, field := range st.Fields.List {
 		fieldType := pkg.TypesInfo.TypeOf(field.Type)
 		fieldName := ""
+		isExported := false
+
 		if len(field.Names) > 0 {
 			fieldName = field.Names[0].Name
+			isExported = field.Names[0].IsExported()
 		} else {
+			isExported = ast.IsExported(p.getTypeNameFromExpr(field.Type))
+
 			// embedded struct, do not flatten fields
 			if ptr, ok := fieldType.(*types.Pointer); ok {
 				fieldType = ptr.Elem()
@@ -186,12 +196,28 @@ func (p *parserImpl) structFields(pkg *packages.Package, st *ast.StructType) map
 				fieldName = named.Obj().Name()
 			}
 		}
+
 		fields[fieldName] = StructFieldInfo{
-			Type:  fieldType,
-			Index: idx,
+			Name:       fieldName,
+			Type:       fieldType,
+			Index:      idx,
+			IsExported: isExported,
 		}
 	}
 	return fields
+}
+
+func (p *parserImpl) getTypeNameFromExpr(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name
+	case *ast.SelectorExpr:
+		return t.Sel.Name
+	case *ast.StarExpr:
+		return p.getTypeNameFromExpr(t.X)
+	default:
+		return ""
+	}
 }
 
 func (p *parserImpl) findFunctionFromPkg(pkg *packages.Package, name string) (FuncInfo, bool) {
