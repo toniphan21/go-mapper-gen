@@ -1,10 +1,47 @@
 package gomappergen
 
 import (
+	"embed"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
+//go:embed features/*.md testdata/*.md
+var goldenMarkdownFiles embed.FS
+
 func TestGolden(t *testing.T) {
+	cases := []struct {
+		file        string
+		printSetup  bool
+		printActual bool
+		printDiff   bool
+	}{
+		{file: "features/basic.md"},
+		{file: "testdata/import.md"},
+		{file: "testdata/placeholder.md"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.file, func(t *testing.T) {
+			content, err := goldenMarkdownFiles.ReadFile(tc.file)
+			require.NoError(t, err)
+
+			mtc := Test.ParseMarkdownTestCases(content)
+			for _, v := range mtc {
+				gtc := v.ToGoldenTestCase()
+				gtc.PrintSetup = tc.printSetup
+				gtc.PrintActual = tc.printActual
+				gtc.PrintDiff = tc.printDiff
+				t.Run(gtc.Name, func(t *testing.T) {
+					Test.RunGoldenTestCase(t, gtc)
+				})
+			}
+		})
+	}
+}
+
+func TestGoldenUseTestData(t *testing.T) {
 	cases := []GoldenTestCaseFromTestData{
 		{
 			Name:        "same-pkg: basic configurations",
@@ -45,22 +82,11 @@ func TestGolden(t *testing.T) {
 				"domain/code.go": "cross-pkg/domain/basic.go",
 				"grpc/code.go":   "cross-pkg/grpc/basic.go",
 			},
-			PklFile:    "cross-pkg/grpc/basic.pkl",
-			GoldenFile: "cross-pkg/grpc/basic.golden",
+			PklFile:        "cross-pkg/grpc/basic.pkl",
+			GoldenFile:     "cross-pkg/grpc/basic.golden",
+			OutputFileName: "grpc/gen_mapper.go",
 		},
 
-		{
-			Name: "use-import: import as source",
-			GoModRequires: map[string]string{
-				"github.com/toniphan21/gmg-lib": "v0.1.0",
-			},
-			GoModModule: "github.com/toniphan21/go-mapper-gen/golden",
-			SourceFiles: map[string]string{
-				"code.go": "use-import/import-as-source.go",
-			},
-			PklFile:    "use-import/import-as-source.pkl",
-			GoldenFile: "use-import/import-as-source.golden",
-		},
 		// ---
 	}
 

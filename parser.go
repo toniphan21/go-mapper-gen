@@ -31,6 +31,8 @@ type FuncInfo struct {
 }
 
 type Parser interface {
+	SourceDir() string
+
 	SourcePackages() []*packages.Package
 
 	FindStruct(pkgPath string, name string) (StructInfo, bool)
@@ -53,14 +55,20 @@ func DefaultParser(dir string) (Parser, error) {
 	}
 
 	return &parserImpl{
+		dir:            dir,
 		config:         cfg,
 		sourcePackages: pkgs,
 	}, nil
 }
 
 type parserImpl struct {
+	dir            string
 	config         *packages.Config
 	sourcePackages []*packages.Package
+}
+
+func (p *parserImpl) SourceDir() string {
+	return p.dir
 }
 
 func (p *parserImpl) SourcePackages() []*packages.Package {

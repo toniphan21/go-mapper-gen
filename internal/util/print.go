@@ -6,6 +6,14 @@ import (
 	"strings"
 )
 
+var tabSize int = 2
+
+func SetTabSize(size int) {
+	if size > 0 {
+		tabSize = size
+	}
+}
+
 type printFileOptions struct {
 	BorderLeft  bool
 	BorderRight bool
@@ -14,14 +22,31 @@ type printFileOptions struct {
 }
 
 func PrintGeneratedFile(name string, data []byte) {
-	printFile(name, data, printFileOptions{})
+	printFile(name, data, printFileOptions{}, func(s string) {
+		fmt.Println(s)
+	})
+	fmt.Println()
 }
 
 func PrintFile(name string, data []byte) {
-	printFile(name, data, printFileOptions{BorderLeft: true, LineNumber: true, Color: true})
+	printFile(name, data, printFileOptions{BorderLeft: true, LineNumber: true, Color: true}, func(s string) {
+		fmt.Println(s)
+	})
+	fmt.Println()
+}
+
+func PrintFileWithFunction(name string, data []byte, output func(string)) {
+	printFile(name, data, printFileOptions{BorderLeft: true, LineNumber: true, Color: true}, output)
 }
 
 func PrintDiff(leftName string, leftData []byte, rightName string, rightData []byte) {
+	PrintDiffWithFunction(leftName, leftData, rightName, rightData, func(s string) {
+		fmt.Println(s)
+	})
+	fmt.Println()
+}
+
+func PrintDiffWithFunction(leftName string, leftData []byte, rightName string, rightData []byte, output func(string)) {
 	left, leftLength := makePrintable(leftName, leftData, printFileOptions{BorderLeft: true, LineNumber: true, Color: true, BorderRight: true})
 	right, _ := makePrintable(rightName, rightData, printFileOptions{BorderLeft: true, LineNumber: true, Color: true})
 
@@ -35,28 +60,27 @@ func PrintDiff(leftName string, leftData []byte, rightName string, rightData []b
 	for i := 0; i < l; i++ {
 		if i < ll && i < rl {
 			line := left[i] + " " + right[i]
-			fmt.Println(line)
+			output(line)
 			continue
 		}
 
 		if i < ll {
-			fmt.Println(left[i])
+			output(left[i])
 			continue
 		}
 
 		line := strings.Repeat(" ", leftLength+1) + right[i]
-		fmt.Println(line)
+		output(line)
 	}
-	fmt.Println()
 }
 
-func printFile(name string, data []byte, opts printFileOptions) {
+func printFile(name string, data []byte, opts printFileOptions, output func(string)) {
 	lines, _ := makePrintable(name, data, opts)
 	for _, line := range lines {
-		fmt.Println(line)
+		output(line)
 	}
-	fmt.Println()
 }
+
 func makePrintable(name string, data []byte, opts printFileOptions) ([]string, int) {
 	var maxLineLength int
 	var out []string
@@ -148,7 +172,7 @@ func lineLength(line string) int {
 	ll := 0
 	for _, r := range line {
 		if r == '\t' {
-			ll += 2
+			ll += tabSize
 			continue
 		}
 		ll += 1

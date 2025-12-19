@@ -10,6 +10,10 @@ type iMapper interface {
 	FromUser(in User) UserMessage
 }
 
+func new_iMapper() iMapper {
+	return &iMapperImpl{}
+}
+
 type iMapperImpl struct{}
 
 func (m *iMapperImpl) ToUser(in UserMessage) User {

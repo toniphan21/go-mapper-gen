@@ -1,6 +1,9 @@
 package file
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type Pkl struct {
 	Path    string
@@ -22,14 +25,18 @@ func (p *Pkl) FileContent() []byte {
 var _ File = (*Pkl)(nil)
 
 func PklDevConfigFile(lines ...string) File {
+	return MakePklDevConfigFile(".../Config.pkl", "dev/config.pkl", lines)
+}
+
+func MakePklDevConfigFile(amends string, filePath string, lines []string) File {
 	var l = []string{
-		`amends ".../Config.pkl"`,
+		fmt.Sprintf(`amends "%s"`, amends),
 		``,
 	}
 	l = append(l, lines...)
 
 	return &Pkl{
-		Path:  "dev/config.pkl",
+		Path:  filePath,
 		Lines: l,
 	}
 }

@@ -45,11 +45,19 @@ func RunGoModTidy(t *testing.T, dir string) {
 }
 
 func RunGoGet(t *testing.T, dir string, requires map[string]string) {
+	err := ExecuteGoGet(dir, requires)
+	if err != nil {
+		t.Fatalf("Failed to run go mod tidy: %v", err)
+	}
+}
+
+func ExecuteGoGet(dir string, requires map[string]string) error {
 	for pkg, version := range requires {
 		cmd := exec.Command("go", "get", fmt.Sprintf("%v@%v", pkg, version))
 		cmd.Dir = dir
 		if err := cmd.Run(); err != nil {
-			t.Fatalf("Failed to run go mod tidy: %v", err)
+			return err
 		}
 	}
+	return nil
 }

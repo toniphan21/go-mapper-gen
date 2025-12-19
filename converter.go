@@ -114,7 +114,7 @@ type ConverterContext interface {
 
 	// Logger returns a slog handler that can be used for logging during
 	// code generation.
-	Logger() slog.Handler
+	Logger() *slog.Logger
 
 	// LookUp searches the global converter registry for a converter that
 	// can convert a value of sourceType to targetType, excluding the provided
@@ -151,7 +151,7 @@ type converterContext struct {
 	context.Context
 	jenFile         *jen.File
 	parser          Parser
-	logger          slog.Handler
+	logger          *slog.Logger
 	currentVarCount int
 }
 
@@ -196,7 +196,7 @@ func (c *converterContext) Run(converter Converter, opts ConverterOption, runner
 	}
 }
 
-func (c *converterContext) Logger() slog.Handler {
+func (c *converterContext) Logger() *slog.Logger {
 	return c.logger
 }
 

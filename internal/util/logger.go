@@ -13,7 +13,7 @@ type SlogHandler struct {
 	level  slog.Level
 }
 
-func NewSlogHandler(writer *os.File, level string) *SlogHandler {
+func NewSlogHandler(writer *os.File, level string) slog.Handler {
 	h := &SlogHandler{writer: writer, level: slog.LevelInfo}
 	h.SetLevel(level)
 	return h
@@ -39,8 +39,22 @@ func (h *SlogHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *SlogHandler) Handle(_ context.Context, r slog.Record) error {
+	showTime := false
 	timeStr := r.Time.Format(time.RFC3339)
-	levelStr := r.Level.String()
+	levelStr := ""
+	switch h.level {
+	case slog.LevelError:
+		levelStr = "ERR"
+	case slog.LevelWarn:
+		levelStr = "WRN"
+	case slog.LevelInfo:
+		levelStr = "INF"
+	case slog.LevelDebug:
+		showTime = true
+		levelStr = "DBG"
+	default:
+		levelStr = r.Level.String()
+	}
 	msg := r.Message
 
 	attrs := ""
@@ -49,8 +63,13 @@ func (h *SlogHandler) Handle(_ context.Context, r slog.Record) error {
 		return true
 	})
 
-	_, err := fmt.Fprintf(h.writer, "[%s] %s: %s%s\n", timeStr, levelStr, msg, attrs)
-	return err
+	if showTime {
+		_, err := fmt.Fprintf(h.writer, "[%s] %s: %s%s\n", timeStr, levelStr, msg, attrs)
+		return err
+	} else {
+		_, err := fmt.Fprintf(h.writer, "%s%s\n", msg, attrs)
+		return err
+	}
 }
 
 func (h *SlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {

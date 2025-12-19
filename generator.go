@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go/types"
+	"log/slog"
 	"math"
 	"slices"
 	"strings"
@@ -12,19 +13,27 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Generate(parser Parser, fileManager FileManager, currentPkg *packages.Package, configs []PackageConfig) error {
+type generatorImpl struct {
+	parser      Parser
+	fileManager FileManager
+	logger      *slog.Logger
+}
+
+func (g *generatorImpl) Generate(currentPkg *packages.Package, configs []PackageConfig) error {
 	for _, cf := range configs {
-		file := fileManager.MakeJenFile(currentPkg, cf)
+		file := g.fileManager.MakeJenFile(g.parser, currentPkg, cf)
 		if file == nil {
 			continue
 		}
 
-		if err := generateMapper(parser, file, currentPkg, cf); err != nil {
+		if err := generateMapper(g.parser, file, currentPkg, cf, g.logger); err != nil {
 			return err
 		}
 	}
 	return nil
 }
+
+var _ Generator = (*generatorImpl)(nil)
 
 type convertibleField struct {
 	index           int
@@ -76,14 +85,14 @@ func (mf *genMapFunc) appendUnconvertibleField(field string) {
 	mf.unconvertibleFields = append(mf.unconvertibleFields, field)
 }
 
-func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config PackageConfig) error {
+func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) error {
 	ctx := &converterContext{
 		Context: context.Background(),
 		jenFile: file,
 		parser:  parser,
-		logger:  nil,
+		logger:  logger,
 	}
-	mapFuncs, err := collectMapFuncs(ctx, currentPkg, config)
+	mapFuncs, err := collectMapFuncs(ctx, currentPkg, config, logger)
 	if err != nil {
 		return err
 	}
@@ -274,7 +283,7 @@ func generateCompileTimeCheck(file *jen.File, config PackageConfig, mapFuncs []*
 	file.Var().Id("_").Id(config.DecoratorInterfaceName).Op("=").Parens(jen.Op("*").Id(config.DecoratorNoOpName)).Parens(jen.Nil())
 }
 
-func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config PackageConfig) ([]*genMapFunc, error) {
+func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) ([]*genMapFunc, error) {
 	var mapFuncs []*genMapFunc
 	for _, cf := range config.Structs {
 		var vars = map[string]string{
@@ -286,13 +295,21 @@ func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config 
 
 		targetStruct, ok := ctx.Parser().FindStruct(replacePlaceholders(cf.TargetPkgPath, vars), cf.TargetStructName)
 		if !ok {
-			// log struct not found
+			logger.Warn(
+				"could not find target struct ",
+				slog.String("target_struct_name", cf.TargetStructName),
+				slog.String("target_pkg", cf.TargetPkgPath),
+			)
 			continue
 		}
 
 		sourceStruct, ok := ctx.Parser().FindStruct(replacePlaceholders(cf.SourcePkgPath, vars), cf.SourceStructName)
 		if !ok {
-			// log source struct not found
+			logger.Warn(
+				"could not find source struct ",
+				slog.String("source_struct_name", cf.SourceStructName),
+				slog.String("source_pkg", cf.SourcePkgPath),
+			)
 			continue
 		}
 
@@ -414,7 +431,7 @@ func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, source
 		opt := ConverterOption{}
 
 		// this is a run to check that converted code is nil or not if converted code is nil we
-		//consider it unconvertible. The main run is in generator... function.
+		// consider it unconvertible. The main run is in generator... function.
 		convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
 		if convertedCode == nil {
 			mapFunc.appendUnconvertibleField(field.targetFieldName)
