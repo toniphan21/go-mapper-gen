@@ -36,7 +36,6 @@ func TestGolden(t *testing.T) {
 			SourceFiles: map[string]string{"code.go": "same-pkg/missing-field.go"},
 			PklFile:     "same-pkg/missing-field.pkl",
 			GoldenFile:  "same-pkg/missing-field.golden",
-			PrintActual: true,
 		},
 
 		{

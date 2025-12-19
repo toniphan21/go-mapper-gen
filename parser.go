@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"go/types"
 
+	"github.com/toniphan21/go-mapper-gen/internal/util"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -16,6 +17,7 @@ type StructInfo struct {
 
 type StructFieldInfo struct {
 	Name       string
+	Getter     *string
 	Type       types.Type
 	Index      int
 	IsExported bool
@@ -34,6 +36,8 @@ type Parser interface {
 	FindStruct(pkgPath string, name string) (StructInfo, bool)
 
 	FindFunction(pkgPath string, name string) (FuncInfo, bool)
+
+	FindVariableMethods(pkgPath string, name string) []FuncInfo
 }
 
 func DefaultParser(dir string) (Parser, error) {
@@ -76,10 +80,16 @@ func (p *parserImpl) FindStruct(pkgPath string, name string) (StructInfo, bool) 
 	}
 
 	for _, pkg := range pkgs {
-		fmt.Println(pkg.Errors)
+		if pkg.PkgPath != pkgPath {
+			continue
+		}
 
-		if pkg.PkgPath == pkgPath && len(pkg.Errors) == 0 {
+		if len(pkg.Errors) == 0 {
 			return p.findStructFromPkg(pkg, name)
+		}
+
+		for _, v := range pkg.Errors {
+			fmt.Println(util.ColorYellow(fmt.Sprintf("Warning: %v", v)))
 		}
 	}
 	return StructInfo{}, false
@@ -105,6 +115,26 @@ func (p *parserImpl) FindFunction(pkgPath string, name string) (FuncInfo, bool) 
 	return FuncInfo{}, false
 }
 
+func (p *parserImpl) FindVariableMethods(pkgPath string, variableName string) []FuncInfo {
+	for _, pkg := range p.sourcePackages {
+		if pkg.PkgPath == pkgPath {
+			return p.findVariableMethodsFromPkg(pkg, variableName)
+		}
+	}
+
+	pkgs, err := packages.Load(p.config, pkgPath)
+	if err != nil {
+		return nil
+	}
+
+	for _, pkg := range pkgs {
+		if pkg.PkgPath == pkgPath && len(pkg.Errors) == 0 {
+			return p.findVariableMethodsFromPkg(pkg, variableName)
+		}
+	}
+	return nil
+}
+
 func (p *parserImpl) findStructFromPkg(pkg *packages.Package, name string) (StructInfo, bool) {
 	structAST := p.findStructAST(pkg, name)
 	if structAST == nil {
@@ -116,7 +146,7 @@ func (p *parserImpl) findStructFromPkg(pkg *packages.Package, name string) (Stru
 		return StructInfo{}, false
 	}
 
-	fields := p.structFields(pkg, structAST)
+	fields := p.structFields(pkg, structAST, structType)
 
 	return StructInfo{
 		Type:   structType,
@@ -174,9 +204,9 @@ func (p *parserImpl) findStructAST(pkg *packages.Package, structName string) *as
 	return nil
 }
 
-func (p *parserImpl) structFields(pkg *packages.Package, st *ast.StructType) map[string]StructFieldInfo {
+func (p *parserImpl) structFields(pkg *packages.Package, sa *ast.StructType, st types.Type) map[string]StructFieldInfo {
 	fields := make(map[string]StructFieldInfo)
-	for idx, field := range st.Fields.List {
+	for idx, field := range sa.Fields.List {
 		fieldType := pkg.TypesInfo.TypeOf(field.Type)
 		fieldName := ""
 		isExported := false
@@ -197,14 +227,54 @@ func (p *parserImpl) structFields(pkg *packages.Package, st *ast.StructType) map
 			}
 		}
 
+		var getter *string
+		if fn := p.findGetterForField(st, "Get"+fieldName, fieldType); fn != nil {
+			v := "Get" + fieldName
+			getter = &v
+		}
 		fields[fieldName] = StructFieldInfo{
 			Name:       fieldName,
 			Type:       fieldType,
 			Index:      idx,
 			IsExported: isExported,
+			Getter:     getter,
 		}
 	}
 	return fields
+}
+
+func (p *parserImpl) findGetterForField(t types.Type, name string, returnedType types.Type) *types.Func {
+	named, ok := t.(*types.Named)
+	if !ok {
+		if ptr, ok := t.(*types.Pointer); ok {
+			named, _ = ptr.Elem().(*types.Named)
+		}
+	}
+	if named == nil {
+		return nil
+	}
+
+	for i := 0; i < named.NumMethods(); i++ {
+		m := named.Method(i)
+
+		if m.Name() != name {
+			continue
+		}
+
+		sig := m.Type().(*types.Signature)
+		if sig.Params().Len() != 0 {
+			continue
+		}
+
+		if sig.Results().Len() != 1 {
+			continue
+		}
+
+		if TypeUtil.IsIdentical(sig.Results().At(0).Type(), returnedType) {
+			return m
+		}
+	}
+	return nil
 }
 
 func (p *parserImpl) getTypeNameFromExpr(expr ast.Expr) string {
@@ -238,19 +308,8 @@ func (p *parserImpl) findFunctionFromPkg(pkg *packages.Package, name string) (Fu
 		return FuncInfo{}, false
 	}
 
-	getTypesFromTuple := func(tup *types.Tuple) []types.Type {
-		if tup == nil {
-			return nil
-		}
-		var typeList []types.Type
-		for i := 0; i < tup.Len(); i++ {
-			typeList = append(typeList, tup.At(i).Type())
-		}
-		return typeList
-	}
-
-	params := getTypesFromTuple(signature.Params())
-	results := getTypesFromTuple(signature.Results())
+	params := p.getTypesFromTuple(signature.Params())
+	results := p.getTypesFromTuple(signature.Results())
 
 	return FuncInfo{
 		Name:        fn.Name(),
@@ -258,6 +317,55 @@ func (p *parserImpl) findFunctionFromPkg(pkg *packages.Package, name string) (Fu
 		Params:      params,
 		Results:     results,
 	}, true
+}
+
+func (p *parserImpl) findVariableMethodsFromPkg(pkg *packages.Package, variableName string) []FuncInfo {
+	obj := pkg.Types.Scope().Lookup(variableName)
+	if obj == nil {
+		return nil
+	}
+
+	v, ok := obj.(*types.Var)
+	if !ok {
+		return nil
+	}
+
+	methodSet := types.NewMethodSet(v.Type())
+
+	var methods []FuncInfo
+	for i := 0; i < methodSet.Len(); i++ {
+		methodObj := methodSet.At(i).Obj()
+
+		fn, ok := methodObj.(*types.Func)
+		if !ok {
+			continue
+		}
+
+		sig, ok := fn.Type().(*types.Signature)
+		if !ok {
+			continue
+		}
+
+		methods = append(methods, FuncInfo{
+			Name:        fn.Name(),
+			PackagePath: pkg.PkgPath,
+			Params:      p.getTypesFromTuple(sig.Params()),
+			Results:     p.getTypesFromTuple(sig.Results()),
+		})
+	}
+
+	return methods
+}
+
+func (p *parserImpl) getTypesFromTuple(tup *types.Tuple) []types.Type {
+	if tup == nil {
+		return nil
+	}
+	var typeList []types.Type
+	for i := 0; i < tup.Len(); i++ {
+		typeList = append(typeList, tup.At(i).Type())
+	}
+	return typeList
 }
 
 var _ Parser = (*parserImpl)(nil)

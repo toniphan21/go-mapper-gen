@@ -86,6 +86,8 @@ type StructConfig struct {
 	Pointer Pointer
 	Fields  FieldConfig
 
+	UseGetter bool
+
 	GenerateSourceToTarget   bool
 	GenerateSourceFromTarget bool
 }
@@ -267,15 +269,16 @@ func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Package
 		}
 		structCf := StructConfig{
 			MapperName:               mapperName,
-			TargetPkgPath:            m.mergeValue(v.TargetPkg, cf.GetTargetPkg()),
+			TargetPkgPath:            mergeConfigValue(v.TargetPkg, cf.GetTargetPkg()),
 			TargetStructName:         targetStructName,
-			SourcePkgPath:            m.mergeValue(v.SourcePkg, cf.GetSourcePkg()),
-			SourceStructName:         m.mergeValue(v.SourceStructName, targetStructName),
-			SourceToTargetFuncName:   m.mergeValue(v.SourceToTargetFunctionName, cf.GetSourceToTargetFunctionName()),
-			SourceFromTargetFuncName: m.mergeValue(v.SourceFromTargetFunctionName, cf.GetSourceFromTargetFunctionName()),
-			DecorateFuncName:         m.mergeValue(v.DecorateFunctionName, cf.GetDecorateFunctionName()),
+			SourcePkgPath:            mergeConfigValue(v.SourcePkg, cf.GetSourcePkg()),
+			SourceStructName:         mergeConfigValue(v.SourceStructName, targetStructName),
+			SourceToTargetFuncName:   mergeConfigValue(v.SourceToTargetFunctionName, cf.GetSourceToTargetFunctionName()),
+			SourceFromTargetFuncName: mergeConfigValue(v.SourceFromTargetFunctionName, cf.GetSourceFromTargetFunctionName()),
+			DecorateFuncName:         mergeConfigValue(v.DecorateFunctionName, cf.GetDecorateFunctionName()),
 			Pointer:                  m.mapPointer(v.Pointer),
 			Fields:                   m.mapFieldConfig(v.Fields),
+			UseGetter:                mergeConfigValue(v.UseGetterIfAvailable, cf.GetUseGetterIfAvailable()),
 			GenerateSourceToTarget:   v.GenerateSourceToTarget,
 			GenerateSourceFromTarget: v.GenerateSourceFromTarget,
 		}
@@ -313,13 +316,6 @@ func (m *configMapper) mapNameMatch(val string) NameMatch {
 	}
 }
 
-func (m *configMapper) mergeValue(structLevelValue *string, pkgLevelValue string) string {
-	if structLevelValue == nil {
-		return pkgLevelValue
-	}
-	return *structLevelValue
-}
-
 func (m *configMapper) mergeOutput(outputs ...*config.Output) Output {
 	output := &Output{}
 	for _, o := range outputs {
@@ -354,6 +350,13 @@ func (m *configMapper) mapFieldConfig(in config.Fields) FieldConfig {
 		NameMatch: m.mapNameMatch(in.Match),
 		ManualMap: manualMap,
 	}
+}
+
+func mergeConfigValue[T any](structLevelValue *T, pkgLevelValue T) T {
+	if structLevelValue == nil {
+		return pkgLevelValue
+	}
+	return *structLevelValue
 }
 
 func parseConverterFunctionConfigFromString(input string) ConvertFunctionConfig {

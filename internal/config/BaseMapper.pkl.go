@@ -26,6 +26,8 @@ type BaseMapper interface {
 
 	GetStructs() map[string]MapperStruct
 
+	GetUseGetterIfAvailable() bool
+
 	GetGenerateGoDoc() bool
 }
 
@@ -55,6 +57,8 @@ type BaseMapperImpl struct {
 	SourcePkg string `pkl:"source_pkg"`
 
 	Structs map[string]MapperStruct `pkl:"structs"`
+
+	UseGetterIfAvailable bool `pkl:"use_getter_if_available"`
 
 	GenerateGoDoc bool `pkl:"generate_go_doc"`
 }
@@ -101,6 +105,10 @@ func (rcv BaseMapperImpl) GetSourcePkg() string {
 
 func (rcv BaseMapperImpl) GetStructs() map[string]MapperStruct {
 	return rcv.Structs
+}
+
+func (rcv BaseMapperImpl) GetUseGetterIfAvailable() bool {
+	return rcv.UseGetterIfAvailable
 }
 
 func (rcv BaseMapperImpl) GetGenerateGoDoc() bool {

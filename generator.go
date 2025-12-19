@@ -333,7 +333,7 @@ func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config 
 				sourceFieldsIndex: makeFieldsIndex(sourceStruct.Fields),
 			}
 
-			fillMapFunc(ctx, &mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields)
+			fillMapFunc(ctx, &mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields, cf.UseGetter)
 			mapFuncs = append(mapFuncs, &mapFunc)
 		}
 
@@ -360,14 +360,14 @@ func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config 
 				sourceFieldsIndex: makeFieldsIndex(targetStruct.Fields),
 			}
 
-			fillMapFunc(ctx, &mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip())
+			fillMapFunc(ctx, &mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip(), cf.UseGetter)
 			mapFuncs = append(mapFuncs, &mapFunc)
 		}
 	}
 	return mapFuncs, nil
 }
 
-func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig) {
+func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig, useGetter bool) {
 	samePkg := mapFunc.targetPkgPath == mapFunc.sourcePkgPath
 	mappedFields := mapFieldNames(targetFields, sourceFields, config, samePkg)
 	for target, source := range mappedFields {
@@ -397,12 +397,17 @@ func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, source
 			continue
 		}
 
+		sourceSymbol := newSymbol("in", source, si.Type)
+		if useGetter && si.Getter != nil {
+			sourceSymbol = sourceSymbol.toGetterSymbol(*si.Getter)
+		}
+
 		field := convertibleField{
 			index:           ti.Index,
 			targetFieldName: target,
 			targetSymbol:    newSymbol("out", target, ti.Type),
 			sourceFieldName: source,
-			sourceSymbol:    newSymbol("in", source, si.Type),
+			sourceSymbol:    sourceSymbol,
 			converter:       converter,
 		}
 

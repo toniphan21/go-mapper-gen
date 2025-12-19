@@ -49,6 +49,8 @@ class MapperStruct {
     match = "ignore-case"
   }
 
+  use_getter_if_available: Boolean?
+
   generate_source_to_target: Boolean = true
   generate_source_from_target: Boolean = true
 }
@@ -69,6 +71,8 @@ open class BaseMapper extends Base {
   source_pkg: String
 
   structs: Mapping<String, MapperStruct>
+
+  use_getter_if_available: Boolean = false
 
   generate_go_doc: Boolean = true
 }

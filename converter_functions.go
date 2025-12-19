@@ -49,6 +49,25 @@ func (c *functionsConverter) Init(parser Parser, config Config) {
 			})
 			continue
 		}
+
+		varFns := parser.FindVariableMethods(v.PackagePath, v.TypeName)
+		if len(varFns) > 0 {
+			variableName := v.TypeName
+			for _, vfn := range varFns {
+				if len(vfn.Params) != 1 && len(vfn.Results) != 1 {
+					continue
+				}
+
+				c.availableFunctions = append(c.availableFunctions, funcConverter{
+					sourceType:   vfn.Params[0],
+					targetType:   vfn.Results[0],
+					variableName: &variableName,
+					pkgPath:      vfn.PackagePath,
+					funcName:     vfn.Name,
+				})
+				continue
+			}
+		}
 	}
 }
 
@@ -101,7 +120,11 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 		}
 
 		if match.before == nil && match.after == nil {
-			return target.Expr().Op("=").Qual(match.fn.pkgPath, match.fn.funcName).Params(source.Expr())
+			code := target.Expr().Op("=")
+			if match.fn.variableName != nil {
+				return code.Qual(match.fn.pkgPath, *match.fn.variableName).Dot(match.fn.funcName).Params(source.Expr())
+			}
+			return code.Qual(match.fn.pkgPath, match.fn.funcName).Params(source.Expr())
 		}
 
 		if match.after == nil {
@@ -117,14 +140,24 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 			code = code.Add(ccode).Line()
 
 			// use fn convert fn.sourceType -> target.Type
-			code = code.Add(target.Expr().Op("=").Qual(match.fn.pkgPath, match.fn.funcName).Params(jen.Id(varName)))
-			return code
+			fc := target.Expr().Op("=")
+			if match.fn.variableName != nil {
+				fc = fc.Qual(match.fn.pkgPath, *match.fn.variableName).Dot(match.fn.funcName).Params(jen.Id(varName))
+			} else {
+				fc = fc.Qual(match.fn.pkgPath, match.fn.funcName).Params(jen.Id(varName))
+			}
+			return code.Add(fc)
 		}
 
 		if match.before == nil {
 			// use fn convert source -> fn.targetType
 			varName := ctx.NextVarName()
-			code := jen.Id(varName).Op(":=").Qual(match.fn.pkgPath, match.fn.funcName).Params(source.Expr()).Line()
+			code := jen.Id(varName).Op(":=")
+			if match.fn.variableName != nil {
+				code = code.Qual(match.fn.pkgPath, *match.fn.variableName).Dot(match.fn.funcName).Params(source.Expr()).Line()
+			} else {
+				code = code.Qual(match.fn.pkgPath, match.fn.funcName).Params(source.Expr()).Line()
+			}
 
 			// use after convert fn.targetType -> target.Type
 			sourceSymbol := Symbol{VarName: varName, Type: match.fn.targetType}
@@ -148,7 +181,13 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 
 		// use fn convert fn.sourceType -> fn.targetType
 		afterVarName := ctx.NextVarName()
-		code = code.Add(jen.Id(afterVarName).Op(":=").Qual(match.fn.pkgPath, match.fn.funcName).Params(jen.Id(beforeVarName))).Line()
+		fc := jen.Id(afterVarName).Op(":=")
+		if match.fn.variableName != nil {
+			fc = fc.Qual(match.fn.pkgPath, *match.fn.variableName).Dot(match.fn.funcName).Params(jen.Id(beforeVarName))
+		} else {
+			fc = fc.Qual(match.fn.pkgPath, match.fn.funcName).Params(jen.Id(beforeVarName))
+		}
+		code = code.Add(fc).Line()
 
 		// use after convert fn.targetType -> target.Type
 		sourceSymbol := Symbol{VarName: afterVarName, Type: match.fn.targetType}

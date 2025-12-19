@@ -20,6 +20,8 @@ type MapperStruct struct {
 
 	Fields Fields `pkl:"fields"`
 
+	UseGetterIfAvailable *bool `pkl:"use_getter_if_available"`
+
 	GenerateSourceToTarget bool `pkl:"generate_source_to_target"`
 
 	GenerateSourceFromTarget bool `pkl:"generate_source_from_target"`

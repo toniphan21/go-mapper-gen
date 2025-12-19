@@ -59,6 +59,15 @@ func (s Symbol) ToIndexedSymbol(idx string) Symbol {
 	return Symbol{VarName: s.VarName, FieldName: &fieldName, Type: s.Type}
 }
 
+func (s Symbol) toGetterSymbol(getterName string) Symbol {
+	if s.FieldName == nil || getterName == "" {
+		return s
+	}
+	fieldName := getterName
+	fieldName += "()"
+	return Symbol{VarName: s.VarName, FieldName: &fieldName, Type: s.Type}
+}
+
 // Converter defines the contract for converting a source value or field
 // into a target value or field during code generation.
 type Converter interface {
