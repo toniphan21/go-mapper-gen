@@ -105,7 +105,7 @@ func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package,
 		return strings.Compare(a.name, b.name)
 	})
 
-	generateMapperInterface(file, config, mapFuncs)
+	generateMapperInterface(file, currentPkg, config, mapFuncs)
 	generateDecoratorInterface(ctx, config, mapFuncs)
 	generateMapperConstructor(ctx, config, mapFuncs)
 	generateMapperImplementation(ctx, config, mapFuncs)
@@ -115,7 +115,7 @@ func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package,
 	return nil
 }
 
-func generateMapperInterface(file *jen.File, config PackageConfig, mapFuncs []*genMapFunc) {
+func generateMapperInterface(file *jen.File, currentPkg *packages.Package, config PackageConfig, mapFuncs []*genMapFunc) {
 	var signatures []jen.Code
 
 	for _, mf := range mapFuncs {
@@ -125,8 +125,8 @@ func generateMapperInterface(file *jen.File, config PackageConfig, mapFuncs []*g
 			comment := fmt.Sprintf(
 				"%v converts a %v value into a %v value.",
 				mf.funcName,
-				GeneratorUtil.SimpleName(mf.sourceType),
-				GeneratorUtil.SimpleName(mf.targetType),
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.sourceType),
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.targetType),
 			)
 
 			signatures = append(signatures, GeneratorUtil.WrapComment(comment))
@@ -183,6 +183,8 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 	}
 
 	for _, mf := range mapFuncs {
+		ctx.resetVarCount()
+
 		params, results := mf.paramsAndResults()
 
 		var body []jen.Code
@@ -220,8 +222,6 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 			Params(results...).
 			Block(body...).
 			Line()
-
-		ctx.resetVarCount()
 	}
 }
 

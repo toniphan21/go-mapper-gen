@@ -14,6 +14,7 @@ import (
 
 type Config struct {
 	BuiltInConverters  BuiltInConverterConfig
+	LibraryConverters  LibraryConverterConfig
 	ConverterFunctions []ConvertFunctionConfig
 	Packages           map[string][]PackageConfig
 }
@@ -30,6 +31,11 @@ type BuiltInConverterConfig struct {
 	UseTypeToPointer bool
 	UsePointerToType bool
 	UseFunctions     bool
+}
+
+type LibraryConverterConfig struct {
+	UseGRPC   bool
+	UsePGType bool
 }
 
 func (c *BuiltInConverterConfig) EnableAll() {
@@ -177,6 +183,7 @@ func ParseConfig(path string) (*Config, error) {
 
 	return &Config{
 		BuiltInConverters:  m.mapBuiltInConverterConfig(cfg.Converter.BuiltIn),
+		LibraryConverters:  m.mapLibraryConverterConfig(cfg.Converter.BuiltIn),
 		ConverterFunctions: m.mapConverterFunctions(cfg.Converter.Functions),
 		Packages:           pkgConfigs,
 	}, nil
@@ -191,6 +198,13 @@ func (m *configMapper) mapBuiltInConverterConfig(in config.BuiltInConverter) Bui
 		UseTypeToPointer: in.EnableTypeToPointer,
 		UsePointerToType: in.EnablePointerToType,
 		UseFunctions:     in.EnableFunctions,
+	}
+}
+
+func (m *configMapper) mapLibraryConverterConfig(in config.BuiltInConverter) LibraryConverterConfig {
+	return LibraryConverterConfig{
+		UseGRPC:   in.Library.EnableGrpc,
+		UsePGType: in.Library.EnablePgtype,
 	}
 }
 

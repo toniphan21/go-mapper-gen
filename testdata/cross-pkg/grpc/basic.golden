@@ -5,10 +5,10 @@ package grpc
 import domain "github.com/toniphan21/go-mapper-gen/golden/domain"
 
 type iMapper interface {
-	// ToUserMessage converts a User value into a UserMessage value.
+	// ToUserMessage converts a domain.User value into a UserMessage value.
 	ToUserMessage(in domain.User) UserMessage
 
-	// FromUserMessage converts a UserMessage value into a User value.
+	// FromUserMessage converts a UserMessage value into a domain.User value.
 	FromUserMessage(in UserMessage) domain.User
 }
 

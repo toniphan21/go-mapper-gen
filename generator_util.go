@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dave/jennifer/jen"
+	"golang.org/x/tools/go/packages"
 )
 
 const CommentWidth = 80
@@ -110,6 +111,29 @@ func (g *genUtil) SimpleName(t types.Type) string {
 		return "func"
 	default:
 		return t.String()
+	}
+}
+
+func (g *genUtil) SimpleNameWithPkg(currentPkg *packages.Package, t types.Type) string {
+	switch tt := t.(type) {
+	case *types.Named:
+		simpleName := tt.Obj().Name()
+
+		obj := tt.Obj()
+
+		actualPkgPath := ""
+		if obj.Pkg() != nil {
+			actualPkgPath = obj.Pkg().Path()
+		}
+		if actualPkgPath == currentPkg.PkgPath {
+			return simpleName
+		}
+		return obj.Pkg().Name() + "." + simpleName
+
+	case *types.Pointer:
+		return g.SimpleNameWithPkg(currentPkg, tt.Elem())
+	default:
+		return g.SimpleName(t)
 	}
 }
 

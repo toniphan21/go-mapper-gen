@@ -129,10 +129,10 @@ package example
 import db "github.com/toniphan21/go-mapper-gen/example/db"
 
 type iMapper interface {
-	// ToUser converts a UserEntity value into a User value.
+	// ToUser converts a db.UserEntity value into a User value.
 	ToUser(in db.UserEntity) User
 
-	// FromUser converts a User value into a UserEntity value.
+	// FromUser converts a User value into a db.UserEntity value.
 	FromUser(in User) db.UserEntity
 }
 

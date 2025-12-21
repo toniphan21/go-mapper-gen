@@ -35,6 +35,14 @@ func (u *typeUtil) IsSlice(t types.Type) (types.Type, bool) {
 	return s.Elem(), true
 }
 
+func (u *typeUtil) IsPointerToNamedType(t types.Type, pkgPath, typeName string) bool {
+	ptr, ok := t.(*types.Pointer)
+	if !ok {
+		return false
+	}
+	return u.MatchNamedType(ptr.Elem(), pkgPath, typeName)
+}
+
 func (u *typeUtil) MatchNamedType(t types.Type, pkgPath, typeName string) bool {
 	if t == nil {
 		return false

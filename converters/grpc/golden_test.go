@@ -1,40 +1,45 @@
 package grpc
 
 import (
+	"embed"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	gen "github.com/toniphan21/go-mapper-gen"
 )
 
-func ignoreTestGolden(t *testing.T) {
-	cases := []gen.GoldenTestCaseFromTestData{
-		{
-			Name:        "timestamp",
-			GoModModule: "github.com/toniphan21/go-mapper-gen/golden",
-			GoModRequires: map[string]string{
-				"github.com/toniphan21/gmg-lib": "v0.2.0",
-			},
-			SourceFiles: map[string]string{"code.go": "timestamp.go"},
-			PklFile:     "timestamp.pkl",
-			GoldenFile:  "timestamp.golden.go",
-			GoSumFileContent: gen.Test.FileLines(
-				`github.com/toniphan21/gmg-lib v0.2.0 h1:MaJMPtFRPVv8DTHhRdr756xaTgsp7sf1TwIYCztFD6w=`,
-				`github.com/toniphan21/gmg-lib v0.2.0/go.mod h1:BZFmDSo4YijtddTGNCaGQmUFuT6QHn+MnQ0pdYKditE=`,
-				`google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=`,
-				`google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=`,
-			),
-			PrintDiff: true,
-		},
-		// ---
+//go:embed features/*.md
+var goldenMarkdownFiles embed.FS
+
+func TestGolden(t *testing.T) {
+	cases := []struct {
+		file        string
+		printSetup  bool
+		printActual bool
+		printDiff   bool
+	}{
+		{file: "features/timestamp.md"},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.Name, func(t *testing.T) {
-			gen.Test.RunGoldenTestCase(t, tc.ToGoldenTestCase(), gen.TestWithSetupConverter(func() {
-				gen.ClearAllRegisteredConverters()
-				gen.RegisterAllBuiltinConverters()
-				RegisterConverters()
-			}))
+		t.Run(tc.file, func(t *testing.T) {
+			content, err := goldenMarkdownFiles.ReadFile(tc.file)
+			require.NoError(t, err)
+
+			mtc := gen.Test.ParseMarkdownTestCases(content)
+			for _, v := range mtc {
+				gtc := v.ToGoldenTestCase()
+				gtc.PrintSetup = tc.printSetup
+				gtc.PrintActual = tc.printActual
+				gtc.PrintDiff = tc.printDiff
+				t.Run(gtc.Name, func(t *testing.T) {
+					gen.Test.RunGoldenTestCase(t, gtc, gen.TestWithSetupConverter(func() {
+						gen.ClearAllRegisteredConverters()
+						gen.RegisterAllBuiltinConverters()
+						RegisterConverters()
+					}))
+				})
+			}
 		})
 	}
 }

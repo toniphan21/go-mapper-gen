@@ -63,10 +63,10 @@ package example
 import gmglib "github.com/toniphan21/gmg-lib"
 
 type iMapper interface {
-	// ToUser converts a User value into a User value.
+	// ToUser converts a gmg.User value into a User value.
 	ToUser(in gmglib.User) User
 
-	// FromUser converts a User value into a User value.
+	// FromUser converts a User value into a gmg.User value.
 	FromUser(in User) gmglib.User
 }
 

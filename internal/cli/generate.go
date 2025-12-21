@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	gen "github.com/toniphan21/go-mapper-gen"
+	"github.com/toniphan21/go-mapper-gen/converters/grpc"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
@@ -33,6 +34,7 @@ func runGenerate(cmd GenerateCmd, logger *slog.Logger) error {
 
 	gen.ClearAllRegisteredConverters()
 	gen.RegisterBuiltinConverters(parsedConfig.BuiltInConverters)
+	loadLibraryConverters(parsedConfig.LibraryConverters)
 
 	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
 	gen.PrintRegisteredConverters(logger)
@@ -57,4 +59,10 @@ func runGenerate(cmd GenerateCmd, logger *slog.Logger) error {
 		_ = os.WriteFile(rp, []byte(out.GoString()), 0644)
 	}
 	return nil
+}
+
+func loadLibraryConverters(cf gen.LibraryConverterConfig) {
+	if cf.UseGRPC {
+		grpc.RegisterConverters()
+	}
 }

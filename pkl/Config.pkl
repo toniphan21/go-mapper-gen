@@ -21,6 +21,13 @@ class BuiltInConverter {
   enable_type_to_pointer: Boolean = true
   enable_pointer_to_type: Boolean = true
   enable_functions: Boolean = true
+
+  library: BuiltInLibraryConverter = new BuiltInLibraryConverter{}
+}
+
+class BuiltInLibraryConverter {
+  enable_grpc: Boolean = true
+  enable_pgtype: Boolean = true
 }
 
 class Converter {
