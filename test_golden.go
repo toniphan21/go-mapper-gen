@@ -148,7 +148,6 @@ func (h *goldenTest) RunGoldenTestCase(t *testing.T, tc GoldenTestCase, opts ...
 		SetupConverter: func() {
 			ClearAllRegisteredConverters()
 			RegisterBuiltinConverters(config.BuiltInConverters)
-			InitAllRegisteredConverters(parser, *config)
 		},
 	}
 	for _, opt := range opts {
@@ -156,6 +155,7 @@ func (h *goldenTest) RunGoldenTestCase(t *testing.T, tc GoldenTestCase, opts ...
 	}
 
 	o.SetupConverter()
+	InitAllRegisteredConverters(parser, *config)
 
 	outputs := make(map[string]string)
 	UseTestVersion()

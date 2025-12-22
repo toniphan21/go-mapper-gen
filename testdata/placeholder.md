@@ -81,6 +81,8 @@ func (m *iMapperImpl) FromUser(in User) UserEntity {
 var _ iMapper = (*iMapperImpl)(nil)
 ```
 
+[//]: # (EmitCode:testdata/golden/placeholder/01-source-package)
+
 ### Concat {CurrentPackage}
 
 We can concat the placeholder if source package is a subpackage of current package
@@ -162,3 +164,5 @@ func (m *iMapperImpl) FromUser(in User) db.UserEntity {
 
 var _ iMapper = (*iMapperImpl)(nil)
 ```
+
+[//]: # (EmitCode:testdata/golden/placeholder/02-concat-source-package)

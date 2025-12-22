@@ -105,14 +105,106 @@ func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package,
 		return strings.Compare(a.name, b.name)
 	})
 
-	generateMapperInterface(file, currentPkg, config, mapFuncs)
-	generateDecoratorInterface(ctx, config, mapFuncs)
-	generateMapperConstructor(ctx, config, mapFuncs)
-	generateMapperImplementation(ctx, config, mapFuncs)
-	generateDecoratorNoOp(ctx, config, mapFuncs)
-	generateCompileTimeCheck(file, config, mapFuncs)
+	switch config.Mode {
+	case ModeFunctions:
+		generateMapperFunctions(ctx, currentPkg, config, mapFuncs)
+
+	default:
+		generateMapperInterface(file, currentPkg, config, mapFuncs)
+		generateDecoratorInterface(ctx, config, mapFuncs)
+		generateMapperConstructor(ctx, config, mapFuncs)
+		generateMapperImplementation(ctx, config, mapFuncs)
+		generateDecoratorNoOp(ctx, config, mapFuncs)
+		generateCompileTimeCheck(file, config, mapFuncs)
+	}
 
 	return nil
+}
+
+func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package, config PackageConfig, mapFuncs []*genMapFunc) {
+	file := ctx.JenFile()
+
+	for _, mf := range mapFuncs {
+		ctx.resetVarCount()
+
+		params, results := mf.paramsAndResults()
+
+		useDecorator := len(mf.missingFields) > 0 || len(mf.unconvertibleFields) > 0
+		if config.DecoratorMode == DecoratorModeAlways {
+			useDecorator = true
+		} else if config.DecoratorMode == DecoratorModeNever {
+			useDecorator = false
+		}
+
+		if useDecorator {
+			params = append(params,
+				jen.Id("decorators").Op("...").Func().
+					Params(
+						jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType)),
+						jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType)),
+					),
+			)
+		}
+
+		var body []jen.Code
+		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetType)).Line())
+
+		for _, field := range mf.mappedFields {
+			opt := ConverterOption{}
+
+			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
+			if convertedCode != nil {
+				body = append(body, convertedCode)
+			}
+		}
+
+		mau := makeMissingAndUnconvertibleFields(mf)
+		if len(mau) > 0 {
+			body = append(body, jen.Line())
+			body = append(body, mau...)
+		}
+
+		if useDecorator {
+			var decoratorParams []jen.Code
+
+			if mf.sourcePointer {
+				decoratorParams = append(decoratorParams, jen.Id(mf.sourceParamName))
+			} else {
+				decoratorParams = append(decoratorParams, jen.Op("&").Id(mf.sourceParamName))
+			}
+			decoratorParams = append(decoratorParams, jen.Op("&").Id(mf.targetParamName))
+
+			code := jen.
+				For(jen.List(jen.Id("_"), jen.Id("decorate")).Op(":=").Range().Id("decorators")).
+				Block(jen.Id("decorate").Call(decoratorParams...))
+
+			body = append(body, jen.Line())
+			body = append(body, code)
+		}
+
+		if mf.targetPointer {
+			body = append(body, jen.Line().Return(jen.Op("&").Id(mf.targetParamName)))
+		} else {
+			body = append(body, jen.Line().Return(jen.Id(mf.targetParamName)))
+		}
+
+		if config.GenerateGoDoc {
+			comment := fmt.Sprintf(
+				"%v converts a %v value into a %v value.",
+				mf.funcName,
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.sourceType),
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.targetType),
+			)
+			file.Comment(comment)
+		}
+
+		file.Func().
+			Id(mf.funcName).
+			Params(params...).
+			Params(results...).
+			Block(body...).
+			Line()
+	}
 }
 
 func generateMapperInterface(file *jen.File, currentPkg *packages.Package, config PackageConfig, mapFuncs []*genMapFunc) {
@@ -138,7 +230,7 @@ func generateMapperInterface(file *jen.File, currentPkg *packages.Package, confi
 }
 
 func generateDecoratorInterface(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
-	if !hasMissingOrUnconvertibleField(mapFuncs) {
+	if !shouldUseDecorator(mapFuncs, config) {
 		return
 	}
 
@@ -158,7 +250,7 @@ func generateDecoratorInterface(ctx *converterContext, config PackageConfig, map
 func generateMapperConstructor(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
 	var params, body []jen.Code
 
-	if hasMissingOrUnconvertibleField(mapFuncs) {
+	if shouldUseDecorator(mapFuncs, config) {
 		params = append(params, jen.Id("decorator").Id(config.DecoratorInterfaceName))
 		body = append(body, jen.Return(jen.Op("&").Id(config.ImplementationName).Values(jen.DictFunc(func(d jen.Dict) {
 			d[jen.Id("decorator")] = jen.Id("decorator")
@@ -172,9 +264,7 @@ func generateMapperConstructor(ctx *converterContext, config PackageConfig, mapF
 
 func generateMapperImplementation(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
 	file := ctx.JenFile()
-	useDecorator := hasMissingOrUnconvertibleField(mapFuncs)
-
-	if useDecorator {
+	if shouldUseDecorator(mapFuncs, config) {
 		file.Type().Id(config.ImplementationName).Struct(
 			jen.Id("decorator").Add(jen.Id(config.DecoratorInterfaceName)),
 		).Line()
@@ -199,14 +289,39 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 			}
 		}
 
-		if len(mf.missingFields) > 0 || len(mf.unconvertibleFields) > 0 {
+		shouldEmitDecoratorComment := len(mf.missingFields) > 0 || len(mf.unconvertibleFields) > 0
+		shouldEmitDecoratorCall := shouldEmitDecoratorComment
+		if config.DecoratorMode == DecoratorModeAlways {
+			shouldEmitDecoratorCall = true
+		} else if config.DecoratorMode == DecoratorModeNever {
+			shouldEmitDecoratorCall = false
+		}
+
+		if shouldEmitDecoratorCall {
+			var decoratorParams []jen.Code
+
+			if mf.sourcePointer {
+				decoratorParams = append(decoratorParams, jen.Id(mf.sourceParamName))
+			} else {
+				decoratorParams = append(decoratorParams, jen.Op("&").Id(mf.sourceParamName))
+			}
+			decoratorParams = append(decoratorParams, jen.Op("&").Id(mf.targetParamName))
+
 			body = append(body, jen.Line())
 			body = append(body, jen.If(jen.Id("m").Dot("decorator").Op("!=").Nil()).BlockFunc(func(g *jen.Group) {
-				g.Id("m").Dot("decorator").Dot(mf.decorateFuncName).Params(
-					jen.Op("&").Id(mf.sourceParamName),
-					jen.Op("&").Id(mf.targetParamName),
-				)
+				g.Id("m").Dot("decorator").Dot(mf.decorateFuncName).Params(decoratorParams...)
 			}))
+
+			// the decorator call is needed and has missing comments already
+			shouldEmitDecoratorComment = false
+		}
+
+		if shouldEmitDecoratorComment {
+			mau := makeMissingAndUnconvertibleFields(mf)
+			if len(mau) > 0 {
+				body = append(body, jen.Line())
+				body = append(body, mau...)
+			}
 		}
 
 		if mf.targetPointer {
@@ -226,7 +341,7 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 }
 
 func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
-	if !hasMissingOrUnconvertibleField(mapFuncs) || config.DecoratorNoOpName == "" {
+	if !shouldUseDecorator(mapFuncs, config) || config.DecoratorNoOpName == "" {
 		return
 	}
 
@@ -238,29 +353,9 @@ func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs
 		params = append(params, jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
 		params = append(params, jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType))))
 
-		hasMissingField := len(mf.missingFields) > 0
-		hasUnconvertibleField := len(mf.unconvertibleFields) > 0
-
-		if hasMissingField {
-			body = append(body, jen.Comment("Fields that could not be mapped:"))
-
-			fields := sortFieldsByIndex(mf.missingFields, mf.targetFieldsIndex)
-			for _, field := range fields {
-				body = append(body, jen.Comment("out."+field+" = "))
-			}
-		}
-
-		if hasMissingField && hasUnconvertibleField {
-			body = append(body, jen.Line())
-		}
-
-		if hasUnconvertibleField {
-			body = append(body, jen.Comment("Fields that could not be converted (no suitable converter found):"))
-
-			fields := sortFieldsByIndex(mf.unconvertibleFields, mf.targetFieldsIndex)
-			for _, field := range fields {
-				body = append(body, jen.Comment("out."+field+" = "))
-			}
+		mau := makeMissingAndUnconvertibleFields(mf)
+		if len(mau) > 0 {
+			body = append(body, mau...)
 		}
 
 		ctx.JenFile().Func().
@@ -277,10 +372,39 @@ func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs
 func generateCompileTimeCheck(file *jen.File, config PackageConfig, mapFuncs []*genMapFunc) {
 	file.Var().Id("_").Id(config.InterfaceName).Op("=").Parens(jen.Op("*").Id(config.ImplementationName)).Parens(jen.Nil())
 
-	if !hasMissingOrUnconvertibleField(mapFuncs) || config.DecoratorNoOpName == "" {
+	if !shouldUseDecorator(mapFuncs, config) || config.DecoratorNoOpName == "" {
 		return
 	}
 	file.Var().Id("_").Id(config.DecoratorInterfaceName).Op("=").Parens(jen.Op("*").Id(config.DecoratorNoOpName)).Parens(jen.Nil())
+}
+
+func makeMissingAndUnconvertibleFields(mf *genMapFunc) []jen.Code {
+	var code []jen.Code
+	hasMissingField := len(mf.missingFields) > 0
+	hasUnconvertibleField := len(mf.unconvertibleFields) > 0
+
+	if hasMissingField {
+		code = append(code, jen.Comment("Fields that could not be mapped:"))
+
+		fields := sortFieldsByIndex(mf.missingFields, mf.targetFieldsIndex)
+		for _, field := range fields {
+			code = append(code, jen.Comment("out."+field+" = "))
+		}
+	}
+
+	if hasMissingField && hasUnconvertibleField {
+		code = append(code, jen.Line())
+	}
+
+	if hasUnconvertibleField {
+		code = append(code, jen.Comment("Fields that could not be converted (no suitable converter found):"))
+
+		fields := sortFieldsByIndex(mf.unconvertibleFields, mf.targetFieldsIndex)
+		for _, field := range fields {
+			code = append(code, jen.Comment("out."+field+" = "))
+		}
+	}
+	return code
 }
 
 func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) ([]*genMapFunc, error) {
@@ -489,7 +613,15 @@ func mapFieldNames(targetFields, sourceFields map[string]StructFieldInfo, config
 	return result
 }
 
-func hasMissingOrUnconvertibleField(fns []*genMapFunc) bool {
+func shouldUseDecorator(fns []*genMapFunc, cf PackageConfig) bool {
+	if cf.DecoratorMode == DecoratorModeAlways {
+		return true
+	}
+
+	if cf.DecoratorMode == DecoratorModeNever {
+		return false
+	}
+
 	for _, mf := range fns {
 		if len(mf.missingFields) > 0 {
 			return true

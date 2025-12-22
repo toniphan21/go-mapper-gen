@@ -3,10 +3,12 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	gen "github.com/toniphan21/go-mapper-gen"
 	"github.com/toniphan21/go-mapper-gen/internal/setup"
@@ -20,7 +22,10 @@ func runTest(cmd TestCmd, logger *slog.Logger) error {
 
 	var tempDirs []string
 	defer func() {
-		logger.Info("deleting temporary directories")
+		if len(tempDirs) > 0 {
+			logger.Info("deleting temporary directories")
+		}
+
 		for _, dir := range tempDirs {
 			logger.Debug("\tdeleted temporary directory " + dir)
 			_ = os.RemoveAll(dir)
@@ -117,7 +122,7 @@ func runTest(cmd TestCmd, logger *slog.Logger) error {
 					logger.Error("\t\t" + util.ColorRed(err.Error()))
 					setupOk = false
 				}
-				logger.Info("\t\tmade pkl config file to " + util.ColorWhite(configFile.FilePath()))
+				logger.Info("\t\tmade pkl config file " + util.ColorWhite(configFile.FilePath()))
 				util.PrintFileWithFunction("", configFile.FileContent(), func(s string) {
 					logger.Debug("\t\t" + s)
 				})
@@ -193,6 +198,8 @@ func runTest(cmd TestCmd, logger *slog.Logger) error {
 						logger.Error("\t\t" + s)
 					})
 					isSuccess = false
+
+					_ = writeTestFile(tempDir, fn+".golden", fc)
 					continue
 				}
 
@@ -205,6 +212,11 @@ func runTest(cmd TestCmd, logger *slog.Logger) error {
 			if isSuccess {
 				tempDirs = append(tempDirs, tempDir)
 				logger.Info("\t\tput temporary directory to clean up list")
+				if cmd.EmitCode {
+					if err := emitTestCode(mdTestCase, tempDir, logger); err != nil {
+						logger.Error("\t\t" + util.ColorRed(err.Error()))
+					}
+				}
 				logger.Info(util.ColorGreen("\t\t\u2714 passed"))
 				logger.Info("")
 				continue
@@ -218,6 +230,46 @@ func runTest(cmd TestCmd, logger *slog.Logger) error {
 			logger.Info("")
 		}
 
+	}
+	return nil
+}
+
+func emitTestCode(testCase gen.MarkdownTestCase, tempDir string, logger *slog.Logger) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	var readme []string
+	var examplePath string
+
+	emit := false
+	lines := strings.Split(testCase.Content, "\n")
+	for _, v := range lines {
+		line := strings.TrimSpace(v)
+		if strings.HasPrefix(line, "[//]: # (EmitCode:") && strings.HasSuffix(line, ")") {
+			line = strings.TrimPrefix(line, "[//]: # (EmitCode:")
+			line = strings.TrimSuffix(line, ")")
+			examplePath = line
+			emit = true
+			continue
+		}
+		readme = append(readme, v)
+	}
+
+	if emit {
+		// copy all files in temp to
+		dst := filepath.Join(wd, examplePath)
+		if err = os.RemoveAll(dst); err != nil {
+			return err
+		}
+
+		if err = copyDir(tempDir, dst); err != nil {
+			return err
+		}
+
+		_ = writeTestFile(dst, "README.md", []byte(strings.Join(readme, "\n")))
+		logger.Info("\t\temit code to " + examplePath)
 	}
 	return nil
 }
@@ -242,9 +294,45 @@ func compareFileContent(left, right []byte) bool {
 	}
 	for i := 0; i < len(left); i++ {
 		if left[i] != right[i] {
-			fmt.Printf("%X %X\n", left[i], right[i])
 			return false
 		}
 	}
 	return true
+}
+
+func copyDir(src string, dst string) error {
+	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		targetPath := filepath.Join(dst, rel)
+
+		if d.IsDir() {
+			return os.MkdirAll(targetPath, 0755)
+		}
+
+		return copyFile(path, targetPath)
+	})
+}
+
+func copyFile(srcFile, dstFile string) error {
+	out, err := os.Create(dstFile)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	in, err := os.Open(srcFile)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }

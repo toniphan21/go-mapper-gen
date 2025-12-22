@@ -104,3 +104,6 @@ func (m *iMapperImpl) FromUser(in User) gmglib.User {
 
 var _ iMapper = (*iMapperImpl)(nil)
 ```
+
+[//]: # (EmitCode:testdata/golden/import)
+

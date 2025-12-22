@@ -1,0 +1,11 @@
+amends "./_pkl_lib_/Config.pkl"
+
+packages {
+  ["github.com/toniphan21/go-mapper-gen/decorator"] {
+    source_pkg = "{CurrentPackage}"
+    
+    structs {
+      ["User"] { source_struct_name = "UserEntity" pointer = "target-only" }
+    }
+  }
+}

@@ -17,9 +17,11 @@ func TestGolden(t *testing.T) {
 		printActual bool
 		printDiff   bool
 	}{
-		{file: "features/basic.md"},
+		{file: "features/basic.md", printActual: false},
 		{file: "testdata/import.md"},
 		{file: "testdata/placeholder.md"},
+		{file: "testdata/decorator.md"},
+		{file: "testdata/decorator-mode.md"},
 	}
 
 	for _, tc := range cases {

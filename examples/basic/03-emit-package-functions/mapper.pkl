@@ -1,0 +1,18 @@
+amends "./_pkl_lib_/Config.pkl"
+
+packages {
+  ["github.com/toniphan21/go-mapper-gen/basic"] {
+    mode = "functions"
+
+    // simply ignored in mode "functions", can be deleted
+    interface_name = "Mapper"
+    implementation_name = "mapperImpl"
+    constructor_name = "NewMapper"
+    
+    source_pkg = "{CurrentPackage}"
+
+    structs {
+      ["User"] { source_struct_name = "UserEntity" }
+    }
+  }
+}

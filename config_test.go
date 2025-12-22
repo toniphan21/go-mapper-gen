@@ -50,9 +50,11 @@ func TestParseConfig_Invalid(t *testing.T) {
 
 type expectedConfig struct {
 	Output                 *Output
+	Mode                   *Mode
 	InterfaceName          *string
 	ImplementationName     *string
 	ConstructorName        *string
+	DecoratorMode          *DecoratorMode
 	DecoratorInterfaceName *string
 	DecoratorNoOpName      *string
 	GenerateGoDoc          *bool
@@ -77,9 +79,11 @@ type expectedStruct struct {
 func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageConfig {
 	defaultCf := PackageConfig{
 		Output:                 Default.Output,
+		Mode:                   Default.Mode,
 		InterfaceName:          Default.InterfaceName,
 		ImplementationName:     Default.ImplementationName,
 		ConstructorName:        Default.ConstructorName,
+		DecoratorMode:          Default.DecoratorMode,
 		DecoratorInterfaceName: Default.DecoratorInterfaceName,
 		DecoratorNoOpName:      Default.DecoratorNoOpName,
 		GenerateGoDoc:          true,
@@ -95,6 +99,9 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageCon
 		if override.Output != nil {
 			result.Output = *override.Output
 		}
+		if override.Mode != nil {
+			result.Mode = *override.Mode
+		}
 		if override.InterfaceName != nil {
 			result.InterfaceName = *override.InterfaceName
 		}
@@ -103,6 +110,9 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageCon
 		}
 		if override.ConstructorName != nil {
 			result.ConstructorName = *override.ConstructorName
+		}
+		if override.DecoratorMode != nil {
+			result.DecoratorMode = *override.DecoratorMode
 		}
 		if override.DecoratorInterfaceName != nil {
 			result.DecoratorInterfaceName = *override.DecoratorInterfaceName

@@ -47,10 +47,12 @@ func (c *BuiltInConverterConfig) EnableAll() {
 }
 
 type PackageConfig struct {
+	Mode                   Mode
 	Output                 Output
 	InterfaceName          string
 	ImplementationName     string
 	ConstructorName        string
+	DecoratorMode          DecoratorMode
 	DecoratorInterfaceName string
 	DecoratorNoOpName      string
 	Structs                []StructConfig
@@ -98,6 +100,21 @@ type StructConfig struct {
 	GenerateSourceFromTarget bool
 }
 
+type Mode int
+
+const (
+	ModeTypes Mode = iota
+	ModeFunctions
+)
+
+type DecoratorMode int
+
+const (
+	DecoratorModeAdaptive DecoratorMode = iota
+	DecoratorModeNever
+	DecoratorModeAlways
+)
+
 type Pointer int
 
 const (
@@ -116,11 +133,13 @@ const (
 
 type defaultCfValue struct {
 	Output                   Output
+	Mode                     Mode
 	InterfaceName            string
 	ImplementationName       string
 	ConstructorName          string
 	SourceToTargetFuncName   string
 	SourceFromTargetFuncName string
+	DecoratorMode            DecoratorMode
 	DecoratorInterfaceName   string
 	DecoratorNoOpName        string
 	DecorateFuncName         string
@@ -149,11 +168,13 @@ var Default = defaultCfValue{
 		FileName:     "gen_mapper.go",
 		TestFileName: "gen_mapper_test.go",
 	},
+	Mode:                     ModeTypes,
 	InterfaceName:            "iMapper",
 	ImplementationName:       "iMapperImpl",
 	ConstructorName:          "new_iMapper",
 	SourceToTargetFuncName:   "To{TargetStructName}",
 	SourceFromTargetFuncName: "From{TargetStructName}",
+	DecoratorMode:            DecoratorModeAdaptive,
 	DecoratorInterfaceName:   "iMapperDecorator",
 	DecoratorNoOpName:        "iMapperDecoratorNoOp",
 	DecorateFuncName:         "decorate{FunctionName}",
@@ -267,9 +288,11 @@ func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Package
 
 	pkgCf := PackageConfig{
 		Output:                 m.mergeOutput(all.GetOutput(), cf.GetOutput()),
+		Mode:                   m.mapMode(cf.GetMode()),
 		InterfaceName:          cf.GetInterfaceName(),
 		ImplementationName:     cf.GetImplementationName(),
 		ConstructorName:        cf.GetConstructorName(),
+		DecoratorMode:          m.mapDecoratorMode(cf.GetDecoratorMode()),
 		DecoratorInterfaceName: cf.GetDecoratorInterfaceName(),
 		DecoratorNoOpName:      cf.GetDecoratorNoopName(),
 		GenerateGoDoc:          cf.GetGenerateGoDoc(),
@@ -302,6 +325,30 @@ func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Package
 
 	pkgCf.Structs = structs
 	return &pkgCf
+}
+
+func (m *configMapper) mapMode(val string) Mode {
+	switch val {
+	case "types":
+		return ModeTypes
+	case "functions":
+		return ModeFunctions
+	default:
+		return ModeTypes
+	}
+}
+
+func (m *configMapper) mapDecoratorMode(val string) DecoratorMode {
+	switch val {
+	case "adaptive":
+		return DecoratorModeAdaptive
+	case "never":
+		return DecoratorModeNever
+	case "always":
+		return DecoratorModeAlways
+	default:
+		return DecoratorModeAdaptive
+	}
 }
 
 func (m *configMapper) mapPointer(val string) Pointer {
