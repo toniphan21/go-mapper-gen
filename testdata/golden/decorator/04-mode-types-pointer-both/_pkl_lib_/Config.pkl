@@ -20,6 +20,7 @@ class BuiltInConverter {
   enable_slice: Boolean = true
   enable_type_to_pointer: Boolean = true
   enable_pointer_to_type: Boolean = true
+  enable_numeric: Boolean = true
   enable_functions: Boolean = true
 
   library: BuiltInLibraryConverter = new BuiltInLibraryConverter{}

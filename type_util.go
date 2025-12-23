@@ -85,4 +85,11 @@ func (u *typeUtil) IsIdentical(t1 types.Type, t2 types.Type) bool {
 	return path1 == path2 && obj1.Name() == obj2.Name()
 }
 
+func (u *typeUtil) MakeNamedType(pkgPath, pkgName, typeName string) types.Type {
+	pkg := types.NewPackage(pkgPath, pkgName)
+	obj := types.NewTypeName(0, pkg, typeName, nil)
+
+	return types.NewNamed(obj, new(types.Struct), nil)
+}
+
 var TypeUtil = &typeUtil{}

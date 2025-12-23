@@ -1,18 +1,16 @@
 //go:generate go run github.com/toniphan21/go-mapper-gen/cmd/generator
 
-package decorator
+package multimappers
 
 type User struct {
-	ID   string
-	Name string
+	ID    string
+	Name  string
+	Email string
+	Age   int
 }
 
 type UserEntity struct {
 	ID    string
-	Email string
-}
-
-type UserMessage struct {
-	ID    string
 	Name  string
+	Email string
 }

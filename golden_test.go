@@ -17,7 +17,11 @@ func TestGolden(t *testing.T) {
 		printActual bool
 		printDiff   bool
 	}{
-		{file: "features/basic.md", printActual: false},
+		{file: "features/basic.md"},
+		{file: "features/config-multiple-mappers.md"},
+		{file: "features/functions-converter.md"},
+
+		{file: "testdata/converter-numeric.md"},
 		{file: "testdata/import.md"},
 		{file: "testdata/placeholder.md"},
 		{file: "testdata/decorator.md"},
@@ -51,14 +55,6 @@ func TestGoldenUseTestData(t *testing.T) {
 			SourceFiles: map[string]string{"code.go": "same-pkg/basic.go"},
 			PklFile:     "same-pkg/basic.pkl",
 			GoldenFile:  "same-pkg/basic.golden",
-		},
-
-		{
-			Name:        "same-pkg: multiple mappers configuration",
-			GoModModule: "github.com/toniphan21/go-mapper-gen/golden",
-			SourceFiles: map[string]string{"code.go": "same-pkg/multiple-mappers.go"},
-			PklFile:     "same-pkg/multiple-mappers.pkl",
-			GoldenFile:  "same-pkg/multiple-mappers.golden",
 		},
 
 		{

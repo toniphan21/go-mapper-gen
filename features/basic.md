@@ -422,4 +422,3 @@ func FromUser(in User) UserEntity {
 }
 ```
 
-### Decorator modes

@@ -27,7 +27,7 @@ type UserEntity struct {
 }
 ```
 
-### mode types; pointer source-only
+### mode types (default); pointer source-only
 
 ```pkl
 packages {

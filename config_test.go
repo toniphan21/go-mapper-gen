@@ -244,7 +244,7 @@ func TestParseConfig(t *testing.T) {
 		},
 
 		{
-			name: "override source_pkg in struct",
+			name: "(flaky because of slice order) override source_pkg in struct",
 			config: []string{
 				`packages {`,
 				`	["github.com/example/repo"] {`,

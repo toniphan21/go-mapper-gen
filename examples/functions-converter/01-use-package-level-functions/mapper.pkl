@@ -1,0 +1,18 @@
+amends "./_pkl_lib_/Config.pkl"
+
+converter {
+  functions {
+    "github.com/toniphan21/go-mapper-gen/fc.MyIDToString"
+    "github.com/toniphan21/go-mapper-gen/fc.StringToMyID"
+  }
+}
+
+packages {
+  ["github.com/toniphan21/go-mapper-gen/fc"] {
+    source_pkg = "{CurrentPackage}"
+
+    structs {
+      ["Target"] { source_struct_name = "Source" }
+    }
+  }
+}

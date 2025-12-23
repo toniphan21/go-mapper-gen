@@ -10,6 +10,8 @@ type BuiltInConverter struct {
 
 	EnablePointerToType bool `pkl:"enable_pointer_to_type"`
 
+	EnableNumeric bool `pkl:"enable_numeric"`
+
 	EnableFunctions bool `pkl:"enable_functions"`
 
 	Library BuiltInLibraryConverter `pkl:"library"`

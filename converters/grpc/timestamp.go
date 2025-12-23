@@ -14,10 +14,7 @@ type timestampConverter struct {
 }
 
 func (c *timestampConverter) Init(parser gen.Parser, config gen.Config) {
-	pkg := types.NewPackage("time", "time")
-	obj := types.NewTypeName(0, pkg, "Time", nil)
-
-	c.standardLibTimeType = types.NewNamed(obj, new(types.Struct), nil)
+	c.standardLibTimeType = gen.TypeUtil.MakeNamedType("time", "time", "Time")
 }
 
 func (c *timestampConverter) Info() gen.ConverterInfo {
@@ -28,7 +25,7 @@ func (c *timestampConverter) Info() gen.ConverterInfo {
 	}
 }
 
-func (c *timestampConverter) CanConvert(ctx gen.ConverterContext, targetType, sourceType types.Type) bool {
+func (c *timestampConverter) CanConvert(ctx gen.LookupContext, targetType, sourceType types.Type) bool {
 	if c.isTimestampPointer(sourceType) {
 		return c.isTime(targetType) || c.isConvertibleFromTime(ctx, targetType)
 	}
@@ -49,8 +46,8 @@ func (c *timestampConverter) ConvertField(ctx gen.ConverterContext, target, sour
 
 		// T -> *timestamppb.Timestamp, where T -> time.Time is possible
 		case c.isConvertibleToTime(ctx, source.Type) && c.isTimestampPointer(target.Type):
-			oc, ok := ctx.LookUp(c, c.standardLibTimeType, source.Type)
-			if !ok {
+			oc, err := ctx.LookUp(c, c.standardLibTimeType, source.Type)
+			if err != nil {
 				return nil
 			}
 
@@ -84,8 +81,8 @@ func (c *timestampConverter) ConvertField(ctx gen.ConverterContext, target, sour
 
 		// *timestamppb.Timestamp -> T, where T -> time.Time is possible
 		case c.isTimestampPointer(source.Type) && c.isConvertibleFromTime(ctx, target.Type):
-			oc, ok := ctx.LookUp(c, target.Type, c.standardLibTimeType)
-			if !ok {
+			oc, err := ctx.LookUp(c, target.Type, c.standardLibTimeType)
+			if err != nil {
 				return nil
 			}
 
@@ -125,15 +122,16 @@ func (c *timestampConverter) isTime(t types.Type) bool {
 	return gen.TypeUtil.MatchNamedType(t, pkgPath, typeName)
 }
 
-func (c *timestampConverter) isConvertibleToTime(ctx gen.ConverterContext, t types.Type) bool {
-	_, ok := ctx.LookUp(c, c.standardLibTimeType, t)
+func (c *timestampConverter) isConvertibleToTime(ctx gen.LookupContext, t types.Type) bool {
+	converter, _ := ctx.LookUp(c, c.standardLibTimeType, t)
 
-	return ok
+	return converter != nil
 }
 
-func (c *timestampConverter) isConvertibleFromTime(ctx gen.ConverterContext, t types.Type) bool {
-	_, ok := ctx.LookUp(c, t, c.standardLibTimeType)
-	return ok
+func (c *timestampConverter) isConvertibleFromTime(ctx gen.LookupContext, t types.Type) bool {
+	converter, _ := ctx.LookUp(c, t, c.standardLibTimeType)
+
+	return converter != nil
 }
 
 var _ gen.Converter = (*timestampConverter)(nil)

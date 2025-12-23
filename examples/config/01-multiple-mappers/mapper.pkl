@@ -1,0 +1,41 @@
+amends "./_pkl_lib_/Config.pkl"
+
+packages {
+	["github.com/toniphan21/go-mapper-gen/multimappers"] {
+		priorities {
+			[0] {
+				// despite that the mapper maps same structs, each one can be config different way
+				source_pkg = "{CurrentPackage}"
+				decorator_mode = "never"
+				generate_go_doc = false
+
+				structs {
+					["User"] { source_struct_name = "UserEntity" }
+				}
+			}
+
+			[1] {
+				// despite that the mapper maps same structs, each one can be config different way
+				source_pkg = "{CurrentPackage}"
+				interface_name = "Mapper"
+				constructor_name = "NewMapper"
+				implementation_name = "mapperImpl"
+				decorator_interface_name = "MapperDecorator"
+				decorator_noop_name = "MapperDecoratorNoOp"
+				decorator_mode = "always"
+				
+				structs {
+					["User"] { source_struct_name = "UserEntity" }
+				}
+			}
+		}
+
+		// outside of priority, it's "default" config and always has last priority
+		mode = "functions"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
+}

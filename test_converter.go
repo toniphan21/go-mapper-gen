@@ -110,10 +110,11 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 
 	jf := jen.NewFilePathName(goMod.GetModule(), "test")
 	ctx := &converterContext{
-		Context: context.Background(),
-		jenFile: jf,
-		parser:  parser,
-		logger:  NewNoopLogger(),
+		Context:       context.Background(),
+		lookupContext: &lookupContext{},
+		jenFile:       jf,
+		parser:        parser,
+		logger:        NewNoopLogger(),
 	}
 
 	if tc.PrintSetUp {

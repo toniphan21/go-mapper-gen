@@ -30,6 +30,7 @@ type BuiltInConverterConfig struct {
 	UseSlice         bool
 	UseTypeToPointer bool
 	UsePointerToType bool
+	UseNumeric       bool
 	UseFunctions     bool
 }
 
@@ -43,6 +44,7 @@ func (c *BuiltInConverterConfig) EnableAll() {
 	c.UseSlice = true
 	c.UseTypeToPointer = true
 	c.UsePointerToType = true
+	c.UseNumeric = true
 	c.UseFunctions = true
 }
 
@@ -218,6 +220,7 @@ func (m *configMapper) mapBuiltInConverterConfig(in config.BuiltInConverter) Bui
 		UseSlice:         in.EnableSlice,
 		UseTypeToPointer: in.EnableTypeToPointer,
 		UsePointerToType: in.EnablePointerToType,
+		UseNumeric:       in.EnableNumeric,
 		UseFunctions:     in.EnableFunctions,
 	}
 }

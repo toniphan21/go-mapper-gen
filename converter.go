@@ -85,7 +85,7 @@ type Converter interface {
 	// TypeUtil to perform type analysis.
 	//
 	// CanConvert must be pure and must not modify file state.
-	CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool
+	CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool
 
 	// ConvertField emits the assignment code that writes the converted value from
 	// source into target. Returning nil suppresses emission.
@@ -99,6 +99,7 @@ type Converter interface {
 // and timeouts defined by the generator.
 type ConverterContext interface {
 	context.Context
+	LookupContext
 
 	// JenFile returns the current jennifer file used for code generation.
 	// Converters may append generated code to this file.
@@ -116,6 +117,14 @@ type ConverterContext interface {
 	// code generation.
 	Logger() *slog.Logger
 
+	// Run executes runner if the context has not been cancelled.
+	// If the context is done, Run returns nil and runner is not executed.
+	// This allows converters to respect generator-defined timeouts without
+	// explicitly checking ctx.Done().
+	Run(converter Converter, opts ConverterOption, runner func() jen.Code) jen.Code
+}
+
+type LookupContext interface {
 	// LookUp searches the global converter registry for a converter that
 	// can convert a value of sourceType to targetType, excluding the provided
 	// currentConverter (if non-nil).
@@ -138,13 +147,52 @@ type ConverterContext interface {
 	// Return value:
 	//   - (Converter, true) if a matching converter was found.
 	//   - (nil, false) if no converter in the registry can perform the conversion.
-	LookUp(current Converter, targetType, sourceType types.Type) (Converter, bool)
+	LookUp(current Converter, targetType, sourceType types.Type) (Converter, error)
+}
 
-	// Run executes runner if the context has not been cancelled.
-	// If the context is done, Run returns nil and runner is not executed.
-	// This allows converters to respect generator-defined timeouts without
-	// explicitly checking ctx.Done().
-	Run(converter Converter, opts ConverterOption, runner func() jen.Code) jen.Code
+type lookupContext struct {
+	converters []*registeredConverter
+}
+
+func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.Type) (Converter, error) {
+	if current == nil {
+		return nil, fmt.Errorf("invalid: current converter is nil")
+	}
+
+	var reachable []*registeredConverter
+	var available []*registeredConverter
+	if l.converters == nil {
+		available = globalConverters
+	} else {
+		available = l.converters
+	}
+
+	for _, reg := range available {
+		if current == reg.converter {
+			continue
+		}
+
+		if normalizeConverterType(current) == reg.typ {
+			continue
+		}
+
+		reachable = append(reachable, reg)
+	}
+
+	ctx := &lookupContext{
+		converters: reachable,
+	}
+	var nextContext []string
+	for _, converter := range ctx.converters {
+		nextContext = append(nextContext, converter.typ.Name())
+	}
+
+	for _, reg := range reachable {
+		if reg.converter.CanConvert(ctx, targetType, sourceType) {
+			return reg.converter, nil
+		}
+	}
+	return nil, fmt.Errorf("unable to find matching converter for target %s, source %s", targetType.String(), sourceType.String())
 }
 
 type converterContext struct {
@@ -153,6 +201,11 @@ type converterContext struct {
 	parser          Parser
 	logger          *slog.Logger
 	currentVarCount int
+	lookupContext   *lookupContext
+}
+
+func (c *converterContext) LookUp(current Converter, targetType, sourceType types.Type) (Converter, error) {
+	return c.lookupContext.LookUp(current, targetType, sourceType)
 }
 
 func (c *converterContext) JenFile() *jen.File {
@@ -200,30 +253,16 @@ func (c *converterContext) Logger() *slog.Logger {
 	return c.logger
 }
 
-func (c *converterContext) LookUp(current Converter, targetType, sourceType types.Type) (Converter, bool) {
-	for _, reg := range converters {
-		if current != nil {
-			if current == reg.converter {
-				continue
-			}
-
-			if normalizeConverterType(current) == reg.typ {
-				continue
-			}
-		}
-
-		if reg.converter.CanConvert(c, targetType, sourceType) {
-			return reg.converter, true
-		}
-	}
-	return nil, false
-}
-
 func (c *converterContext) resetVarCount() {
 	c.currentVarCount = 0
 }
 
+func (c *converterContext) resetLookupContext() {
+	c.lookupContext.converters = nil
+}
+
 var _ ConverterContext = (*converterContext)(nil)
+var _ LookupContext = (*converterContext)(nil)
 
 // ConverterInfo describes metadata about a Converter.
 // It is primarily used for debugging, logging, and trace comments
@@ -259,17 +298,17 @@ func normalizeConverterType(v Converter) reflect.Type {
 	return t
 }
 
-var converters []*registeredConverter
+var globalConverters []*registeredConverter
 
 func registerConverter(converter Converter, priority int, isBuiltIn bool) {
-	converters = append(converters, &registeredConverter{
+	globalConverters = append(globalConverters, &registeredConverter{
 		converter: converter,
 		typ:       normalizeConverterType(converter),
 		priority:  priority,
 		builtIn:   isBuiltIn,
 	})
 
-	slices.SortFunc(converters, func(a, b *registeredConverter) int {
+	slices.SortFunc(globalConverters, func(a, b *registeredConverter) int {
 		return a.priority - b.priority
 	})
 }
@@ -304,12 +343,12 @@ func RegisterConverter(converter Converter, priority int) {
 }
 
 func RegisteredConverterCount() int {
-	return len(converters)
+	return len(globalConverters)
 }
 
 func PrintRegisteredConverters(logger *slog.Logger) {
 	shortFormBuffer := 0
-	for _, c := range converters {
+	for _, c := range globalConverters {
 		info := c.converter.Info()
 		l := len(info.ShortForm)
 		if l > shortFormBuffer {
@@ -317,7 +356,7 @@ func PrintRegisteredConverters(logger *slog.Logger) {
 		}
 	}
 
-	for _, v := range converters {
+	for _, v := range globalConverters {
 		builtin := ""
 		if v.builtIn {
 			builtin = util.ColorCyan("[built-in]")
@@ -337,7 +376,7 @@ func PrintRegisteredConverters(logger *slog.Logger) {
 }
 
 func ClearAllRegisteredConverters() {
-	converters = []*registeredConverter{}
+	globalConverters = []*registeredConverter{}
 }
 
 func RegisterAllBuiltinConverters() {
@@ -369,6 +408,11 @@ func RegisterBuiltinConverters(config BuiltInConverterConfig) {
 		priority++
 	}
 
+	if config.UseNumeric {
+		registerConverter(BuiltinConverters.Numeric, priority, true)
+		priority++
+	}
+
 	if config.UseFunctions {
 		registerConverter(BuiltinConverters.Functions, priority, true)
 		priority++
@@ -376,14 +420,14 @@ func RegisterBuiltinConverters(config BuiltInConverterConfig) {
 }
 
 func InitAllRegisteredConverters(parser Parser, parsedConfig Config) {
-	for _, v := range converters {
+	for _, v := range globalConverters {
 		v.converter.Init(parser, parsedConfig)
 	}
 }
 
-func findConverter(ctx ConverterContext, targetType, sourceType types.Type) (Converter, bool) {
-	for _, reg := range converters {
-		if reg.converter.CanConvert(ctx, targetType, sourceType) {
+func findConverter(targetType, sourceType types.Type) (Converter, bool) {
+	for _, reg := range globalConverters {
+		if reg.converter.CanConvert(&lookupContext{}, targetType, sourceType) {
 			return reg.converter, true
 		}
 	}
@@ -395,6 +439,7 @@ type builtinConverters struct {
 	Slice         Converter
 	TypeToPointer Converter
 	PointerToType Converter
+	Numeric       Converter
 	Functions     Converter
 }
 
@@ -403,5 +448,6 @@ var BuiltinConverters = builtinConverters{
 	Slice:         &sliceConverter{},
 	TypeToPointer: &typeToPointerConverter{},
 	PointerToType: &pointerToTypeConverter{},
+	Numeric:       &numericConverter{},
 	Functions:     &functionsConverter{},
 }

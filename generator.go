@@ -87,11 +87,13 @@ func (mf *genMapFunc) appendUnconvertibleField(field string) {
 
 func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) error {
 	ctx := &converterContext{
-		Context: context.Background(),
-		jenFile: file,
-		parser:  parser,
-		logger:  logger,
+		Context:       context.Background(),
+		lookupContext: &lookupContext{},
+		jenFile:       file,
+		parser:        parser,
+		logger:        logger,
 	}
+
 	mapFuncs, err := collectMapFuncs(ctx, currentPkg, config, logger)
 	if err != nil {
 		return err
@@ -152,6 +154,7 @@ func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package
 		for _, field := range mf.mappedFields {
 			opt := ConverterOption{}
 
+			ctx.resetLookupContext()
 			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
@@ -283,6 +286,7 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 		for _, field := range mf.mappedFields {
 			opt := ConverterOption{}
 
+			ctx.resetLookupContext()
 			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
@@ -348,6 +352,8 @@ func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs
 	ctx.jenFile.Type().Id(config.DecoratorNoOpName).Struct().Line()
 
 	for _, mf := range mapFuncs {
+		ctx.resetVarCount()
+
 		var body []jen.Code
 		var params []jen.Code
 		params = append(params, jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
@@ -364,8 +370,6 @@ func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs
 			Params(params...).
 			Block(body...).
 			Line()
-
-		ctx.resetVarCount()
 	}
 }
 
@@ -407,7 +411,7 @@ func makeMissingAndUnconvertibleFields(mf *genMapFunc) []jen.Code {
 	return code
 }
 
-func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) ([]*genMapFunc, error) {
+func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) ([]*genMapFunc, error) {
 	var mapFuncs []*genMapFunc
 	for _, cf := range config.Structs {
 		var vars = map[string]string{
@@ -508,7 +512,7 @@ func collectMapFuncs(ctx ConverterContext, currentPkg *packages.Package, config 
 	return mapFuncs, nil
 }
 
-func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig, useGetter bool) {
+func fillMapFunc(ctx *converterContext, mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig, useGetter bool) {
 	samePkg := mapFunc.targetPkgPath == mapFunc.sourcePkgPath
 	mappedFields := mapFieldNames(targetFields, sourceFields, config, samePkg)
 	for target, source := range mappedFields {
@@ -532,7 +536,7 @@ func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, source
 			continue
 		}
 
-		converter, ok := findConverter(ctx, ti.Type, si.Type)
+		converter, ok := findConverter(ti.Type, si.Type)
 		if !ok {
 			mapFunc.unconvertibleFields = append(mapFunc.unconvertibleFields, target)
 			continue
@@ -556,6 +560,7 @@ func fillMapFunc(ctx ConverterContext, mapFunc *genMapFunc, targetFields, source
 
 		// this is a run to check that converted code is nil or not if converted code is nil we
 		// consider it unconvertible. The main run is in generator... function.
+		ctx.resetLookupContext()
 		convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
 		if convertedCode == nil {
 			mapFunc.appendUnconvertibleField(field.targetFieldName)

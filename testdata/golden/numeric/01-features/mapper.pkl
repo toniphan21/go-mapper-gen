@@ -1,0 +1,11 @@
+amends "./_pkl_lib_/Config.pkl"
+
+packages {
+  ["github.com/toniphan21/go-mapper-gen/numeric"] {
+    source_pkg = "{CurrentPackage}"
+    
+    structs {
+      ["Target"] { source_struct_name = "Source" }
+    }
+  }
+}

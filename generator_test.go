@@ -202,7 +202,7 @@ func (d *dummyConverter) Info() ConverterInfo {
 	return ConverterInfo{Name: "dummy"}
 }
 
-func (d *dummyConverter) CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool {
+func (d *dummyConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
 	return true
 }
 

@@ -24,7 +24,7 @@ func (c *identicalTypeConverter) Info() ConverterInfo {
 	}
 }
 
-func (c *identicalTypeConverter) CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool {
+func (c *identicalTypeConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
 	return TypeUtil.IsIdentical(targetType, sourceType)
 }
 
@@ -54,7 +54,7 @@ func (c *typeToPointerConverter) Info() ConverterInfo {
 	}
 }
 
-func (c *typeToPointerConverter) CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool {
+func (c *typeToPointerConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
 	return TypeUtil.IsPointerOfType(targetType, sourceType) && !TypeUtil.IsInterface(sourceType)
 }
 
@@ -84,7 +84,7 @@ func (c *pointerToTypeConverter) Info() ConverterInfo {
 	}
 }
 
-func (c *pointerToTypeConverter) CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool {
+func (c *pointerToTypeConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
 	return TypeUtil.IsPointerOfType(sourceType, targetType) && !TypeUtil.IsInterface(targetType)
 }
 
@@ -124,7 +124,7 @@ func (c *sliceConverter) Info() ConverterInfo {
 	}
 }
 
-func (c *sliceConverter) findTypeConverter(ctx ConverterContext, targetType, sourceType types.Type) (Converter, types.Type, types.Type, bool) {
+func (c *sliceConverter) findTypeConverter(ctx LookupContext, targetType, sourceType types.Type) (Converter, types.Type, types.Type, bool) {
 	ts, ok := TypeUtil.IsSlice(targetType)
 	if !ok {
 		return nil, nil, nil, false
@@ -135,14 +135,14 @@ func (c *sliceConverter) findTypeConverter(ctx ConverterContext, targetType, sou
 		return nil, nil, nil, false
 	}
 
-	other, have := ctx.LookUp(c, ts, ss)
-	if !have {
+	other, _ := ctx.LookUp(c, ts, ss)
+	if other == nil {
 		return nil, nil, nil, false
 	}
 	return other, ts, ss, true
 }
 
-func (c *sliceConverter) CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool {
+func (c *sliceConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
 	_, _, _, ok := c.findTypeConverter(ctx, targetType, sourceType)
 	return ok
 }

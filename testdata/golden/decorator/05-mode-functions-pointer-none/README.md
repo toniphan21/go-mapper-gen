@@ -27,7 +27,7 @@ type UserEntity struct {
 }
 ```
 
-### mode functions; pointer none
+### mode functions; pointer none (default)
 
 ```pkl
 packages {
@@ -36,7 +36,7 @@ packages {
     source_pkg = "{CurrentPackage}"
     
     structs {
-      ["User"] { source_struct_name = "UserEntity" pointer = "none" }
+      ["User"] { source_struct_name = "UserEntity" }
     }
   }
 }

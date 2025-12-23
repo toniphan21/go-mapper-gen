@@ -34,6 +34,7 @@ func (c *functionsConverter) Init(parser Parser, config Config) {
 		return
 	}
 
+	c.availableFunctions = make([]funcConverter, 0)
 	for _, v := range config.ConverterFunctions {
 		fn, ok := parser.FindFunction(v.PackagePath, v.TypeName)
 		if ok {
@@ -79,13 +80,13 @@ func (c *functionsConverter) Info() ConverterInfo {
 	}
 }
 
-func (c *functionsConverter) CanConvert(ctx ConverterContext, targetType, sourceType types.Type) bool {
+func (c *functionsConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
 	match := c.matchFuncConverter(ctx, targetType, sourceType)
 
 	return match.CanConvert()
 }
 
-func (c *functionsConverter) matchFuncConverter(ctx ConverterContext, targetType, sourceType types.Type) funcConverterMatch {
+func (c *functionsConverter) matchFuncConverter(ctx LookupContext, targetType, sourceType types.Type) funcConverterMatch {
 	for _, fn := range c.availableFunctions {
 		identicalTarget := TypeUtil.IsIdentical(fn.targetType, targetType)
 		identicalSource := TypeUtil.IsIdentical(fn.sourceType, sourceType)
@@ -94,12 +95,14 @@ func (c *functionsConverter) matchFuncConverter(ctx ConverterContext, targetType
 			return funcConverterMatch{fn: &fn}
 		}
 
-		before, convertibleSource := ctx.LookUp(c, fn.sourceType, sourceType)
+		before, err := ctx.LookUp(c, fn.sourceType, sourceType)
+		convertibleSource := err == nil
 		if identicalTarget && convertibleSource {
 			return funcConverterMatch{before: before, fn: &fn, after: nil}
 		}
 
-		after, convertibleTarget := ctx.LookUp(c, targetType, fn.targetType)
+		after, err := ctx.LookUp(c, targetType, fn.targetType)
+		convertibleTarget := err == nil
 		if identicalSource && convertibleTarget {
 			return funcConverterMatch{before: nil, fn: &fn, after: after}
 		}
