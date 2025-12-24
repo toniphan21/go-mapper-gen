@@ -29,6 +29,8 @@ type ConverterTestCase struct {
 	ConverterOption              ConverterOption
 	TargetSymbolWithoutFieldName bool
 	SourceSymbolWithoutFieldName bool
+	TargetSymbolMetadata         SymbolMetadata
+	SourceSymbolMetadata         SymbolMetadata
 	ExpectedCanConvert           bool
 	ExpectedImports              []string
 	ExpectedCode                 []string
@@ -130,8 +132,8 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 
 	targetField := "targetField"
 	sourceField := "sourceField"
-	targetSymbol := Symbol{VarName: "out", Type: targetFieldInfo.Type}
-	sourceSymbol := Symbol{VarName: "in", Type: sourceFieldInfo.Type}
+	targetSymbol := Symbol{VarName: "out", Type: targetFieldInfo.Type, Metadata: tc.TargetSymbolMetadata}
+	sourceSymbol := Symbol{VarName: "in", Type: sourceFieldInfo.Type, Metadata: tc.SourceSymbolMetadata}
 	if !tc.TargetSymbolWithoutFieldName {
 		targetSymbol.FieldName = &targetField
 	} else {

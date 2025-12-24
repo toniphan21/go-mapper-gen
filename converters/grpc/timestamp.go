@@ -55,7 +55,7 @@ func (c *timestampConverter) ConvertField(ctx gen.ConverterContext, target, sour
 			varName := ctx.NextVarName()
 			code := jen.Line().Var().Id(varName).Add(gen.GeneratorUtil.TypeToJenCode(c.standardLibTimeType)).Line()
 
-			targetSymbol := gen.Symbol{VarName: varName, Type: c.standardLibTimeType}
+			targetSymbol := gen.Symbol{VarName: varName, Type: c.standardLibTimeType, Metadata: gen.SymbolMetadata{IsVariable: true}}
 			convertedCode := oc.ConvertField(ctx, targetSymbol, source, opts)
 			if convertedCode == nil {
 				return nil

@@ -135,7 +135,7 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 			code := jen.Var().Id(varName).Add(GeneratorUtil.TypeToJenCode(match.fn.sourceType)).Line()
 
 			// use before convert source.Type -> fn.sourceType
-			targetSymbol := Symbol{VarName: varName, Type: match.fn.sourceType}
+			targetSymbol := Symbol{VarName: varName, Type: match.fn.sourceType, Metadata: SymbolMetadata{IsVariable: true}}
 			ccode := match.before.ConvertField(ctx, targetSymbol, source, opt)
 			if ccode == nil {
 				return nil
@@ -175,7 +175,7 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 		beforeVarName := ctx.NextVarName()
 		code := jen.Var().Id(beforeVarName).Add(GeneratorUtil.TypeToJenCode(match.fn.sourceType)).Line()
 		// use before convert source.Type -> fn.sourceType
-		targetSymbol := Symbol{VarName: beforeVarName, Type: match.fn.sourceType}
+		targetSymbol := Symbol{VarName: beforeVarName, Type: match.fn.sourceType, Metadata: SymbolMetadata{IsVariable: true}}
 		bCode := match.before.ConvertField(ctx, targetSymbol, source, opt)
 		if bCode == nil {
 			return nil

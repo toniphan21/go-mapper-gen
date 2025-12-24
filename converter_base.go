@@ -90,17 +90,20 @@ func (c *pointerToTypeConverter) CanConvert(ctx LookupContext, targetType, sourc
 
 func (c *pointerToTypeConverter) ConvertField(ctx ConverterContext, target, source Symbol, opt ConverterOption) jen.Code {
 	return ctx.Run(c, opt, func() jen.Code {
-		return jen.If(source.Expr().Op("==").Nil()).
+		code := jen.If(source.Expr().Op("!=").Nil()).
 			BlockFunc(func(g *jen.Group) {
-				code := g.Var().Id("zero").Add(GeneratorUtil.TypeToJenCode(target.Type)).Line()
-				code = code.Add(target.Expr()).Op("=").Id("zero")
-			}).
-			Else().
-			BlockFunc(func(g *jen.Group) {
-				code := g.Add(target.Expr())
-				code = code.Op("=")
-				code = code.Op("*").Add(source.Expr())
+				gc := g.Add(target.Expr())
+				gc = gc.Op("=")
+				gc = gc.Op("*").Add(source.Expr())
 			})
+
+		if !target.Metadata.IsVariable {
+			code = code.Else().BlockFunc(func(g *jen.Group) {
+				gc := g.Var().Id("zero").Add(GeneratorUtil.TypeToJenCode(target.Type)).Line()
+				gc = gc.Add(target.Expr()).Op("=").Id("zero")
+			})
+		}
+		return code
 	})
 }
 

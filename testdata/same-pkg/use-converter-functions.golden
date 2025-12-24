@@ -66,10 +66,7 @@ func (m *iMapperImpl) FromConverterFuncTargetPointer(in ConverterFuncTargetPoint
 	var out ConverterFuncSource
 
 	var v0 MyID
-	if in.ID == nil {
-		var zero MyID
-		v0 = zero
-	} else {
+	if in.ID != nil {
 		v0 = *in.ID
 	}
 	out.ID = MyIDToString(v0)

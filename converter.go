@@ -33,6 +33,11 @@ type Symbol struct {
 	VarName   string
 	FieldName *string
 	Type      types.Type
+	Metadata  SymbolMetadata
+}
+
+type SymbolMetadata struct {
+	IsVariable bool
 }
 
 func newSymbol(varName string, fieldName string, typ types.Type) Symbol {

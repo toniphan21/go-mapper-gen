@@ -1,4 +1,7 @@
-## Config multiple mappers
+## Configuration
+
+
+### Multiple mappers
 
 In a package usually a single mapper is enough for most use cases. You can config multiple
 mapper in different modes with different names.

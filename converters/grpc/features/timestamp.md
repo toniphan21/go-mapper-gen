@@ -224,19 +224,13 @@ func (m *iMapperImpl) FromUser(in User) v1.User {
 	out.Age = in.Age
 
 	var v0 time.Time
-	if in.CreatedAt == nil {
-		var zero time.Time
-		v0 = zero
-	} else {
+	if in.CreatedAt != nil {
 		v0 = *in.CreatedAt
 	}
 	out.CreatedAt = timestamppb.New(v0)
 
 	var v1 time.Time
-	if in.UpdatedAt == nil {
-		var zero time.Time
-		v1 = zero
-	} else {
+	if in.UpdatedAt != nil {
 		v1 = *in.UpdatedAt
 	}
 	out.UpdatedAt = timestamppb.New(v1)

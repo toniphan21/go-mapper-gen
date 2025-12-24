@@ -82,10 +82,7 @@ func (m *iMapperImpl) ToTarget(in Source) Target {
 	out.A = int(in.A)
 
 	var v0 uint
-	if in.B == nil {
-		var zero uint
-		v0 = zero
-	} else {
+	if in.B != nil {
 		v0 = *in.B
 	}
 	out.B = int(v0)
@@ -93,10 +90,7 @@ func (m *iMapperImpl) ToTarget(in Source) Target {
 	out.C = &v1
 
 	var v2 uint
-	if in.D == nil {
-		var zero uint
-		v2 = zero
-	} else {
+	if in.D != nil {
 		v2 = *in.D
 	}
 	v3 := int(v2)
@@ -113,19 +107,13 @@ func (m *iMapperImpl) FromTarget(in Target) Source {
 	out.B = &v0
 
 	var v1 int
-	if in.C == nil {
-		var zero int
-		v1 = zero
-	} else {
+	if in.C != nil {
 		v1 = *in.C
 	}
 	out.C = uint(v1)
 
 	var v2 int
-	if in.D == nil {
-		var zero int
-		v2 = zero
-	} else {
+	if in.D != nil {
 		v2 = *in.D
 	}
 	v3 := uint(v2)

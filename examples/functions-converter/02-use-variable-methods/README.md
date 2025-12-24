@@ -89,7 +89,7 @@ type iMapperImpl struct{}
 func (m *iMapperImpl) ToTarget(in Source) Target {
 	var out Target
 
-	out.ID = StringToMyID(in.ID)
+	out.ID = ConvertFuncs.StringToMyID(in.ID)
 	out.Name = in.Name
 
 	return out
@@ -98,7 +98,7 @@ func (m *iMapperImpl) ToTarget(in Source) Target {
 func (m *iMapperImpl) FromTarget(in Target) Source {
 	var out Source
 
-	out.ID = MyIDToString(in.ID)
+	out.ID = ConvertFuncs.MyIDToString(in.ID)
 	out.Name = in.Name
 
 	return out
