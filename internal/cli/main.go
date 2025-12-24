@@ -22,9 +22,11 @@ type GenerateCmd struct {
 
 type TestCmd struct {
 	Files       []string `arg:"positional" help:"Markdown files for BDD tests" placeholder:"FILE"`
+	Name        string   `arg:"-n,--name" help:"Run test which has matched name (case insensitive)" default:""`
 	TabSize     int      `arg:"-t,--tab-size" help:"Number of spaces to use in tab size" default:"8"`
 	LogGenerate bool     `arg:"-l,--log-generate" help:"Log in generate code process" default:"false"`
 	EmitCode    bool     `arg:"-e,--emit-code" help:"Emit to code if the test passed" default:"false"`
+	ShowSetup   bool     `arg:"-s,--show-setup" help:"Show test setup step, if you are running less than 10 test cases it will be show by default"`
 }
 
 type Args struct {
@@ -37,6 +39,8 @@ type Args struct {
 }
 
 func Run(args Args) {
+	execPath := os.Args[0]
+
 	level := "info"
 	if args.Verbose {
 		level = "debug"
@@ -69,7 +73,7 @@ func Run(args Args) {
 				inputs = append(inputs, matches...)
 			}
 		}
-		handleError(runTest(*args.Test, logger))
+		handleError(runTest(*args.Test, execPath, logger))
 
 	case args.Generate != nil:
 		absPath, err := filepath.Abs(args.Generate.WorkingDir)

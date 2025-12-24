@@ -10,6 +10,10 @@ func ColorRed(text string) string {
 	return fmt.Sprintf("\u001B[0;31m%s\u001B[0m", text)
 }
 
+func ColorRedBold(text string) string {
+	return fmt.Sprintf("\u001B[1;31m%s\u001B[0m", text)
+}
+
 func ColorGreen(text string) string {
 	return fmt.Sprintf("\u001B[0;32m%s\u001B[0m", text)
 }

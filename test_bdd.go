@@ -42,6 +42,14 @@ type MarkdownTestCase struct {
 	PklDevFileContent []byte
 }
 
+func (tc *MarkdownTestCase) IsNameMatch(term string) bool {
+	if strings.TrimSpace(term) != "" {
+		search := strings.ToLower(strings.TrimSpace(term))
+		return strings.Index(search, strings.ToLower(tc.Name)) != -1
+	}
+	return false
+}
+
 func (tc *MarkdownTestCase) ToGoldenTestCase() GoldenTestCase {
 	out := GoldenTestCase{
 		Name:              tc.Name,

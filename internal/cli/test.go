@@ -16,225 +16,368 @@ import (
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
-func runTest(cmd TestCmd, logger *slog.Logger) error {
+const maxCountToHideSetup = 10
+
+func runTest(cmd TestCmd, execPath string, logger *slog.Logger) error {
+	runner := &testRunner{
+		logger:   logger,
+		execPath: execPath,
+	}
+	return runner.Run(cmd)
+}
+
+type testFile struct {
+	fileName  string
+	testCases []gen.MarkdownTestCase
+}
+
+type failedTest struct {
+	fileName string
+	testName string
+}
+
+func (t *failedTest) makeRunCmd(execPath string) string {
+	cmd := execPath
+	if strings.Index(execPath, "go-build") != -1 {
+		cmd = "go run ./cmd/go-mapper-gen"
+	}
+	cmd += " test " + t.fileName + " -n='" + strings.ToLower(t.testName) + "'"
+	return cmd
+}
+
+type testRunner struct {
+	disableLog bool
+	execPath   string
+	logger     *slog.Logger
+}
+
+func (r *testRunner) logError(msg string, args ...any) {
+	r.logger.Error(msg, args...)
+}
+
+func (r *testRunner) logWarn(msg string, args ...any) {
+	r.logger.Warn(msg, args...)
+}
+
+func (r *testRunner) logInfo(msg string, args ...any) {
+	if r.disableLog {
+		return
+	}
+	r.logger.Info(msg, args...)
+}
+
+func (r *testRunner) logDebug(msg string, args ...any) {
+	if r.disableLog {
+		return
+	}
+	r.logger.Debug(msg, args...)
+}
+
+func (r *testRunner) print(msg string) {
+	r.logger.Info(msg)
+}
+
+func (r *testRunner) Run(cmd TestCmd) error {
 	gen.UseTestVersion()
 	util.SetTabSize(cmd.TabSize)
 
+	var total, passed, failed int
+	var failedTests []failedTest
 	var tempDirs []string
 	defer func() {
 		if len(tempDirs) > 0 {
-			logger.Info("deleting temporary directories")
+			r.logInfo("deleting temporary directories")
+			for _, dir := range tempDirs {
+				r.logDebug("\tdeleted temporary directory " + dir)
+				_ = os.RemoveAll(dir)
+			}
+			r.logInfo("")
 		}
 
-		for _, dir := range tempDirs {
-			logger.Debug("\tdeleted temporary directory " + dir)
-			_ = os.RemoveAll(dir)
+		if total == passed {
+			r.print(util.ColorGreen(fmt.Sprintf("Result: passed all %d total tests", passed)))
+			r.print("")
+		} else {
+			r.print(util.ColorRedBold(fmt.Sprintf("Result: %d failed, passed %d/%d total tests.", failed, passed, total)))
+			r.print("")
+			r.print("Run failed test command:")
+			r.print("")
+			for _, ft := range failedTests {
+				r.print("\t" + ft.makeRunCmd(r.execPath))
+			}
+			r.print("")
 		}
 	}()
 
-	for _, inputFile := range cmd.Files {
-		logger.Info("running test for " + util.ColorBlue(inputFile))
+	testFiles, count := r.makeTestFiles(cmd)
+	showSetup := false
+	if count < maxCountToHideSetup {
+		showSetup = true
+	} else {
+		showSetup = cmd.ShowSetup
+	}
 
+	if !showSetup {
+		r.disableLog = true
+	}
+
+	total = count
+
+	for _, tf := range testFiles {
+		if r.disableLog {
+			r.print(util.ColorBlue(tf.fileName))
+		}
+		r.logInfo("running test for " + util.ColorBlue(tf.fileName))
+
+		for _, tc := range tf.testCases {
+			r.logInfo("\ttesting " + util.ColorCyan(tc.Name))
+			tempDir, err := os.MkdirTemp("", "mapper-*")
+			if err != nil {
+				r.logError("\tError creating temp dir:", slog.Any("error", err))
+			}
+			r.logInfo("\t\tcreated temporary directory at " + util.ColorWhite(tempDir))
+
+			isSuccess := r.runTestCase(cmd, tc, tempDir)
+			if isSuccess {
+				tempDirs = append(tempDirs, tempDir)
+				if r.disableLog {
+					r.print(util.ColorGreen("\t\u2714 passed ") + tc.Name)
+				}
+				passed++
+				continue
+			}
+
+			failedTests = append(failedTests, failedTest{
+				fileName: tf.fileName,
+				testName: tc.Name,
+			})
+			failed++
+			if r.disableLog {
+				r.print(util.ColorRed("\t\u2718 failed ") + tc.Name)
+			}
+		}
+
+		if r.disableLog {
+			r.print("")
+		}
+	}
+
+	return nil
+}
+
+func (r *testRunner) makeTestFiles(cmd TestCmd) ([]testFile, int) {
+	var count int
+	var result []testFile
+	for _, inputFile := range cmd.Files {
 		stat, err := os.Stat(inputFile)
 		if err != nil {
-			logger.Error(util.ColorRed(err.Error()))
+			r.logError(util.ColorRed(err.Error()))
 			continue
 		}
 
 		if stat.IsDir() {
-			logger.Warn(util.ColorBlue(inputFile) + " is a directory, skipped")
+			r.logWarn(util.ColorBlue(inputFile) + " is a directory, skipped")
 			continue
 		}
 
 		content, err := os.ReadFile(inputFile)
 		if err != nil {
-			logger.Error(util.ColorRed(err.Error()))
+			r.logError(util.ColorRed(err.Error()))
 			continue
 		}
 
-		mdTestCases := gen.Test.ParseMarkdownTestCases(content)
-		for _, mdTestCase := range mdTestCases {
-			logger.Info("\ttesting " + util.ColorCyan(mdTestCase.Name))
-			tempDir, err := os.MkdirTemp("", "mapper-*")
-			if err != nil {
-				logger.Error("\tError creating temp dir:", slog.Any("error", err))
-			}
-			logger.Info("\t\tcreated temporary directory at " + util.ColorWhite(tempDir))
-
-			if mdTestCase.GoModFileContent != nil {
-				logger.Info("\t\tcopied go.mod file")
-				if err := writeTestFile(tempDir, "go.mod", mdTestCase.GoModFileContent); err != nil {
-					logger.Error("\t\t" + util.ColorRed(err.Error()))
-					continue
-				}
-				util.PrintFileWithFunction("", mdTestCase.GoModFileContent, func(s string) {
-					logger.Debug("\t\t" + s)
-				})
-
-				directDependencies, err := gen.Test.ParseDirectDependencies(mdTestCase.GoModFileContent)
-				if err != nil {
-					logger.Error("\t\t" + util.ColorRed(err.Error()))
-					continue
-				}
-
-				if len(directDependencies) > 0 {
-					if err = setup.ExecuteGoGet(tempDir, directDependencies); err != nil {
-						logger.Error("\t\t" + util.ColorRed(err.Error()))
-						continue
-					}
-					logger.Info("\t\tinstalled dependencies")
+		var matched []gen.MarkdownTestCase
+		tcs := gen.Test.ParseMarkdownTestCases(content)
+		if strings.TrimSpace(cmd.Name) != "" {
+			for _, v := range tcs {
+				if v.IsNameMatch(cmd.Name) {
+					matched = append(matched, v)
 				}
 			}
-
-			if mdTestCase.GoSumFileContent != nil {
-				logger.Info("\t\tcopied go.sum file")
-				if err := writeTestFile(tempDir, "go.sum", mdTestCase.GoSumFileContent); err != nil {
-					logger.Error(util.ColorRed(err.Error()))
-					continue
-				}
-				util.PrintFileWithFunction("", mdTestCase.GoSumFileContent, func(s string) {
-					logger.Debug("\t\t" + s)
-				})
-			}
-
-			setupOk := true
-
-			if mdTestCase.PklDevFileContent != nil {
-				pklLibFiles := setup.PklLibFiles()
-				for _, v := range pklLibFiles {
-					fp := path.Join("_pkl_lib_", v.FilePath())
-					logger.Info("\t\tcopied pkl lib file " + v.FilePath() + " to " + fp)
-
-					if err = writeTestFile(tempDir, fp, v.FileContent()); err != nil {
-						logger.Error("\t\t" + util.ColorRed(err.Error()))
-						setupOk = false
-						continue
-					}
-				}
-
-				configFile := file.MakePklDevConfigFile(
-					"./_pkl_lib_/Config.pkl",
-					"mapper.pkl",
-					[]string{string(mdTestCase.PklDevFileContent)},
-				)
-
-				if err = writeTestFile(tempDir, configFile.FilePath(), configFile.FileContent()); err != nil {
-					logger.Error("\t\t" + util.ColorRed(err.Error()))
-					setupOk = false
-				}
-				logger.Info("\t\tmade pkl config file " + util.ColorWhite(configFile.FilePath()))
-				util.PrintFileWithFunction("", configFile.FileContent(), func(s string) {
-					logger.Debug("\t\t" + s)
-				})
-			}
-
-			if !setupOk {
-				continue
-			}
-
-			for fn, fc := range mdTestCase.SourceFiles {
-				if err = writeTestFile(tempDir, fn, fc); err != nil {
-					logger.Error(util.ColorRed(err.Error()))
-					setupOk = false
-					continue
-				}
-				logger.Info("\t\tcopied source file " + util.ColorWhite(fn))
-
-				util.PrintFileWithFunction("", fc, func(s string) {
-					logger.Debug("\t\t" + s)
-				})
-
-				if fn == "go.mod" {
-					directDependencies, err := gen.Test.ParseDirectDependencies(fc)
-					if err != nil {
-						logger.Error("\t\t" + util.ColorRed(err.Error()))
-						setupOk = false
-						continue
-					}
-
-					if len(directDependencies) > 0 {
-						if err = setup.ExecuteGoGet(tempDir, directDependencies); err != nil {
-							logger.Error("\t\t" + util.ColorRed(err.Error()))
-							setupOk = false
-							continue
-						}
-						logger.Info("\t\tinstalled dependencies")
-					}
-				}
-			}
-
-			if !setupOk {
-				continue
-			}
-
-			logger.Info("\t\tgenerating mapper")
-			glogger := gen.NewNoopLogger()
-			if cmd.LogGenerate {
-				glogger = logger
-			}
-			err = runGenerate(GenerateCmd{WorkingDir: tempDir}, glogger)
-			if err != nil {
-				logger.Error(util.ColorRed(err.Error()))
-				continue
-			}
-
-			isSuccess := true
-			for fn, fc := range mdTestCase.GoldenFiles {
-				out, err := readTestFile(tempDir, fn)
-				if err != nil {
-					if errors.Is(err, os.ErrNotExist) {
-						logger.Error(util.ColorRed(fmt.Sprintf("\t\texpected golden file %v but file does not exist", fn)))
-						isSuccess = false
-						continue
-					}
-
-					logger.Error(err.Error())
-					continue
-				}
-
-				if !compareFileContent(out, fc) {
-					logger.Error(util.ColorRed("\t\tgolden file content does not match expectation"))
-					util.PrintDiffWithFunction("expected", fc, "generated", out, func(s string) {
-						logger.Error("\t\t" + s)
-					})
-					isSuccess = false
-
-					_ = writeTestFile(tempDir, fn+".golden", fc)
-					continue
-				}
-
-				logger.Debug("\t\tpassed with " + util.ColorYellow("golden file ") + util.ColorWhite(fn))
-				util.PrintFileWithFunction("", fc, func(s string) {
-					logger.Debug("\t\t" + s)
-				})
-			}
-
-			if isSuccess {
-				tempDirs = append(tempDirs, tempDir)
-				logger.Info("\t\tput temporary directory to clean up list")
-				if cmd.EmitCode {
-					if err := emitTestCode(mdTestCase, tempDir, logger); err != nil {
-						logger.Error("\t\t" + util.ColorRed(err.Error()))
-					}
-				}
-				logger.Info(util.ColorGreen("\t\t\u2714 passed"))
-				logger.Info("")
-				continue
-			}
-
-			logger.Info("\t\tsaved test case to file test.md")
-			logger.Info("\t\ttemporary directory will not be deleted")
-			_ = writeTestFile(tempDir, "test.md", []byte(mdTestCase.Content))
-
-			logger.Info(util.ColorRed("\t\t\u2718 failed"))
-			logger.Info("")
+		} else {
+			matched = tcs
 		}
 
+		count = count + len(matched)
+		result = append(result, testFile{
+			fileName:  inputFile,
+			testCases: matched,
+		})
 	}
-	return nil
+	return result, count
 }
 
-func emitTestCode(testCase gen.MarkdownTestCase, tempDir string, logger *slog.Logger) error {
+func (r *testRunner) runTestCase(cmd TestCmd, mdTestCase gen.MarkdownTestCase, tempDir string) bool {
+	if mdTestCase.GoModFileContent != nil {
+		r.logInfo("\t\tcopied go.mod file")
+		if err := r.writeTestFile(tempDir, "go.mod", mdTestCase.GoModFileContent); err != nil {
+			r.logError("\t\t" + util.ColorRed(err.Error()))
+			return false
+		}
+		util.PrintFileWithFunction("", mdTestCase.GoModFileContent, func(s string) {
+			r.logDebug("\t\t" + s)
+		})
+
+		directDependencies, err := gen.Test.ParseDirectDependencies(mdTestCase.GoModFileContent)
+		if err != nil {
+			r.logError("\t\t" + util.ColorRed(err.Error()))
+			return false
+		}
+
+		if len(directDependencies) > 0 {
+			if err = setup.ExecuteGoGet(tempDir, directDependencies); err != nil {
+				r.logError("\t\t" + util.ColorRed(err.Error()))
+				return false
+			}
+			r.logInfo("\t\tinstalled dependencies")
+		}
+	}
+
+	if mdTestCase.GoSumFileContent != nil {
+		r.logInfo("\t\tcopied go.sum file")
+		if err := r.writeTestFile(tempDir, "go.sum", mdTestCase.GoSumFileContent); err != nil {
+			r.logError(util.ColorRed(err.Error()))
+			return false
+		}
+		util.PrintFileWithFunction("", mdTestCase.GoSumFileContent, func(s string) {
+			r.logDebug("\t\t" + s)
+		})
+	}
+
+	setupOk := true
+
+	if mdTestCase.PklDevFileContent != nil {
+		pklLibFiles := setup.PklLibFiles()
+		for _, v := range pklLibFiles {
+			fp := path.Join("_pkl_lib_", v.FilePath())
+			r.logInfo("\t\tcopied pkl lib file " + v.FilePath() + " to " + fp)
+
+			if err := r.writeTestFile(tempDir, fp, v.FileContent()); err != nil {
+				r.logError("\t\t" + util.ColorRed(err.Error()))
+				setupOk = false
+				return false
+			}
+		}
+
+		configFile := file.MakePklDevConfigFile(
+			"./_pkl_lib_/Config.pkl",
+			"mapper.pkl",
+			[]string{string(mdTestCase.PklDevFileContent)},
+		)
+
+		if err := r.writeTestFile(tempDir, configFile.FilePath(), configFile.FileContent()); err != nil {
+			r.logError("\t\t" + util.ColorRed(err.Error()))
+			setupOk = false
+		}
+		r.logInfo("\t\tmade pkl config file " + util.ColorWhite(configFile.FilePath()))
+		util.PrintFileWithFunction("", configFile.FileContent(), func(s string) {
+			r.logDebug("\t\t" + s)
+		})
+	}
+
+	if !setupOk {
+		return false
+	}
+
+	for fn, fc := range mdTestCase.SourceFiles {
+		if err := r.writeTestFile(tempDir, fn, fc); err != nil {
+			r.logError(util.ColorRed(err.Error()))
+			setupOk = false
+			continue
+		}
+		r.logInfo("\t\tcopied source file " + util.ColorWhite(fn))
+
+		util.PrintFileWithFunction("", fc, func(s string) {
+			r.logDebug("\t\t" + s)
+		})
+
+		if fn == "go.mod" {
+			directDependencies, err := gen.Test.ParseDirectDependencies(fc)
+			if err != nil {
+				r.logError("\t\t" + util.ColorRed(err.Error()))
+				setupOk = false
+				continue
+			}
+
+			if len(directDependencies) > 0 {
+				if err = setup.ExecuteGoGet(tempDir, directDependencies); err != nil {
+					r.logError("\t\t" + util.ColorRed(err.Error()))
+					setupOk = false
+					continue
+				}
+				r.logInfo("\t\tinstalled dependencies")
+			}
+		}
+	}
+
+	if !setupOk {
+		return false
+	}
+
+	r.logInfo("\t\tgenerating mapper")
+	glogger := gen.NewNoopLogger()
+	if cmd.LogGenerate {
+		glogger = r.logger
+	}
+	err := runGenerate(GenerateCmd{WorkingDir: tempDir}, glogger)
+	if err != nil {
+		r.logError(util.ColorRed(err.Error()))
+		return false
+	}
+
+	isSuccess := true
+	for fn, fc := range mdTestCase.GoldenFiles {
+		out, err := r.readTestFile(tempDir, fn)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				r.logInfo(util.ColorRed(fmt.Sprintf("\t\texpected golden file %v but file does not exist", fn)))
+				isSuccess = false
+				continue
+			}
+
+			r.logError(err.Error())
+			continue
+		}
+
+		if !r.compareFileContent(out, fc) {
+			r.logInfo(util.ColorRed("\t\tgolden file content does not match expectation"))
+			util.PrintDiffWithFunction("expected", fc, "generated", out, func(s string) {
+				r.logInfo("\t\t" + s)
+			})
+			isSuccess = false
+
+			_ = r.writeTestFile(tempDir, fn+".golden", fc)
+			continue
+		}
+
+		r.logDebug("\t\tpassed with " + util.ColorYellow("golden file ") + util.ColorWhite(fn))
+		util.PrintFileWithFunction("", fc, func(s string) {
+			r.logDebug("\t\t" + s)
+		})
+	}
+
+	if isSuccess {
+		r.logInfo("\t\tput temporary directory to clean up list")
+		if cmd.EmitCode {
+			if err := r.emitTestCode(mdTestCase, tempDir); err != nil {
+				r.logError("\t\t" + util.ColorRed(err.Error()))
+			}
+		}
+		r.logInfo(util.ColorGreen("\t\t\u2714 passed"))
+		r.logInfo("")
+		return true
+	}
+
+	r.logInfo("\t\tsaved test case to file test.md")
+	r.logInfo("\t\ttemporary directory will not be deleted")
+	_ = r.writeTestFile(tempDir, "test.md", []byte(mdTestCase.Content))
+
+	r.logInfo(util.ColorRed("\t\t\u2718 failed"))
+	r.logInfo("")
+	return false
+}
+
+func (r *testRunner) emitTestCode(testCase gen.MarkdownTestCase, tempDir string) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -264,17 +407,17 @@ func emitTestCode(testCase gen.MarkdownTestCase, tempDir string, logger *slog.Lo
 			return err
 		}
 
-		if err = copyDir(tempDir, dst); err != nil {
+		if err = r.copyDir(tempDir, dst); err != nil {
 			return err
 		}
 
-		_ = writeTestFile(dst, "README.md", []byte(strings.Join(readme, "\n")))
-		logger.Info("\t\temit code to " + examplePath)
+		_ = r.writeTestFile(dst, "README.md", []byte(strings.Join(readme, "\n")))
+		r.logInfo("\t\temit code to " + examplePath)
 	}
 	return nil
 }
 
-func writeTestFile(testDir string, filePath string, fileContent []byte) error {
+func (r *testRunner) writeTestFile(testDir string, filePath string, fileContent []byte) error {
 	fp := filepath.Join(testDir, filePath)
 	dir := filepath.Dir(fp)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -283,12 +426,12 @@ func writeTestFile(testDir string, filePath string, fileContent []byte) error {
 	return os.WriteFile(fp, fileContent, 0600)
 }
 
-func readTestFile(testDir string, filePath string) ([]byte, error) {
+func (r *testRunner) readTestFile(testDir string, filePath string) ([]byte, error) {
 	fp := filepath.Join(testDir, filePath)
 	return os.ReadFile(fp)
 }
 
-func compareFileContent(left, right []byte) bool {
+func (r *testRunner) compareFileContent(left, right []byte) bool {
 	if len(left) != len(right) {
 		return false
 	}
@@ -300,7 +443,7 @@ func compareFileContent(left, right []byte) bool {
 	return true
 }
 
-func copyDir(src string, dst string) error {
+func (r *testRunner) copyDir(src string, dst string) error {
 	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -316,11 +459,11 @@ func copyDir(src string, dst string) error {
 			return os.MkdirAll(targetPath, 0755)
 		}
 
-		return copyFile(path, targetPath)
+		return r.copyFile(path, targetPath)
 	})
 }
 
-func copyFile(srcFile, dstFile string) error {
+func (r *testRunner) copyFile(srcFile, dstFile string) error {
 	out, err := os.Create(dstFile)
 	if err != nil {
 		return err
