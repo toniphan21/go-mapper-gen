@@ -7,6 +7,7 @@ import (
 
 	gen "github.com/toniphan21/go-mapper-gen"
 	"github.com/toniphan21/go-mapper-gen/converters/grpc"
+	"github.com/toniphan21/go-mapper-gen/converters/pgtype"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
@@ -64,5 +65,8 @@ func runGenerate(cmd GenerateCmd, logger *slog.Logger) error {
 func loadLibraryConverters(cf gen.LibraryConverterConfig) {
 	if cf.UseGRPC {
 		grpc.RegisterConverters()
+	}
+	if cf.UsePGType {
+		pgtype.RegisterConverters()
 	}
 }

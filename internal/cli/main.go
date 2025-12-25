@@ -54,6 +54,8 @@ func Run(args Args) {
 			logger.Error(util.ColorRed(err.Error()))
 			return
 		}
+		logger.Debug(fmt.Sprintf("Total LookUp hits %d", gomappergen.LookUpTotalHits))
+		logger.Debug("")
 		logger.Info(util.ColorGreen("done"))
 	}
 

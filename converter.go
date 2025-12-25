@@ -129,77 +129,6 @@ type ConverterContext interface {
 	Run(converter Converter, opts ConverterOption, runner func() jen.Code) jen.Code
 }
 
-type LookupContext interface {
-	// LookUp searches the global converter registry for a converter that
-	// can convert a value of sourceType to targetType, excluding the provided
-	// currentConverter (if non-nil).
-	//
-	// This helper is intended for converter implementations that need to
-	// delegate or reuse existing conversion rules. A common use-case is a
-	// SliceConverter that converts []T -> []V by looking up a converter for
-	// T -> V and then generating per-element conversion code.
-	//
-	// Selection rules (implementation contract):
-	//  1. The registry is scanned for converters c where c.CanConvert(targetType, sourceType)
-	//     returns true.
-	//  2. The currentConverter parameter is excluded from consideration to avoid
-	//     trivial self-selection (if currentConverter == nil, no exclusion occurs).
-	//  3. From the remaining candidates, the converter with the highest priority
-	//     (your package's ordering rule: lower numeric value = higher priority)
-	//     is chosen. If multiple converters share the same priority, the selection
-	//     must be deterministic (for example: registration order or stable sorting).
-	//
-	// Return value:
-	//   - (Converter, true) if a matching converter was found.
-	//   - (nil, false) if no converter in the registry can perform the conversion.
-	LookUp(current Converter, targetType, sourceType types.Type) (Converter, error)
-}
-
-type lookupContext struct {
-	converters []*registeredConverter
-}
-
-func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.Type) (Converter, error) {
-	if current == nil {
-		return nil, fmt.Errorf("invalid: current converter is nil")
-	}
-
-	var reachable []*registeredConverter
-	var available []*registeredConverter
-	if l.converters == nil {
-		available = globalConverters
-	} else {
-		available = l.converters
-	}
-
-	for _, reg := range available {
-		if current == reg.converter {
-			continue
-		}
-
-		if normalizeConverterType(current) == reg.typ {
-			continue
-		}
-
-		reachable = append(reachable, reg)
-	}
-
-	ctx := &lookupContext{
-		converters: reachable,
-	}
-	var nextContext []string
-	for _, converter := range ctx.converters {
-		nextContext = append(nextContext, converter.typ.Name())
-	}
-
-	for _, reg := range reachable {
-		if reg.converter.CanConvert(ctx, targetType, sourceType) {
-			return reg.converter, nil
-		}
-	}
-	return nil, fmt.Errorf("unable to find matching converter for target %s, source %s", targetType.String(), sourceType.String())
-}
-
 type converterContext struct {
 	context.Context
 	jenFile         *jen.File
@@ -419,14 +348,13 @@ func RegisterBuiltinConverters(config BuiltInConverterConfig) {
 		priority++
 	}
 
+	// these should have the lowerest priority
 	if config.UseNumeric {
-		registerConverter(BuiltinConverters.Numeric, priority, true)
-		priority++
+		registerConverter(BuiltinConverters.Numeric, 1000, true)
 	}
 
 	if config.UseFunctions {
-		registerConverter(BuiltinConverters.Functions, priority, true)
-		priority++
+		registerConverter(BuiltinConverters.Functions, 1001, true)
 	}
 }
 
@@ -434,15 +362,6 @@ func InitAllRegisteredConverters(parser Parser, parsedConfig Config) {
 	for _, v := range globalConverters {
 		v.converter.Init(parser, parsedConfig)
 	}
-}
-
-func findConverter(targetType, sourceType types.Type) (Converter, bool) {
-	for _, reg := range globalConverters {
-		if reg.converter.CanConvert(&lookupContext{}, targetType, sourceType) {
-			return reg.converter, true
-		}
-	}
-	return nil, false
 }
 
 type builtinConverters struct {

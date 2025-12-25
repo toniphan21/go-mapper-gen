@@ -22,8 +22,15 @@ type TypeInfo struct {
 func (ti TypeInfo) ToType() types.Type {
 	if ti.PkgPath == "" && ti.PkgName == "" {
 		// basic type, no package
-		obj := types.NewTypeName(0, nil, ti.TypeName, nil)
-		typ := types.NewNamed(obj, types.Typ[types.Invalid], nil)
+		basic := ti.findBasic(ti.TypeName)
+		var typ types.Type
+		if basic == nil {
+			obj := types.NewTypeName(0, nil, ti.TypeName, nil)
+			typ = types.NewNamed(obj, types.Typ[types.Invalid], nil)
+		} else {
+			typ = basic
+		}
+
 		if !ti.IsPointer {
 			return typ
 		}
@@ -39,6 +46,14 @@ func (ti TypeInfo) ToType() types.Type {
 		return typ
 	}
 	return types.NewPointer(typ)
+}
+
+func (ti TypeInfo) findBasic(name string) types.Type {
+	obj := types.Universe.Lookup(name)
+	if obj != nil {
+		return obj.Type()
+	}
+	return nil
 }
 
 type standardRouting struct {
@@ -153,24 +168,31 @@ func (o *StandardConversionOrchestrator) routing(c Converter, ctx LookupContext,
 	}
 
 	if o.OtherToSourceToTarget != nil {
-		bc := o.findConverter(c, ctx, source, expectedSource)
-		if o.isTypesMatch(expectedTarget, target) && bc != nil {
-			return standardRouting{route: standardRouteOtherToSourceToTarget, beforeConverter: bc}
+		if o.isTypesMatch(expectedTarget, target) {
+			// ctx.LookUp is so expensive, it has to check last
+			bc := o.findConverter(c, ctx, source, expectedSource)
+			if bc != nil {
+				return standardRouting{route: standardRouteOtherToSourceToTarget, beforeConverter: bc}
+			}
 		}
 	}
 
 	if o.SourceToTargetToOther != nil {
-		ac := o.findConverter(c, ctx, expectedTarget, target)
-		if o.isTypesMatch(expectedSource, source) && ac != nil {
-			return standardRouting{route: standardRouteSourceToTargetToOther, afterConverter: ac}
+		if o.isTypesMatch(expectedSource, source) {
+			ac := o.findConverter(c, ctx, expectedTarget, target)
+			if ac != nil {
+				return standardRouting{route: standardRouteSourceToTargetToOther, afterConverter: ac}
+			}
 		}
 	}
 
 	if o.OtherToSourceToTargetToOther != nil {
 		ac := o.findConverter(c, ctx, source, expectedSource)
-		bc := o.findConverter(c, ctx, expectedTarget, target)
-		if ac != nil && bc != nil {
-			return standardRouting{route: standardRouteOtherToSourceToTargetToOther, beforeConverter: bc, afterConverter: ac}
+		if ac != nil {
+			bc := o.findConverter(c, ctx, expectedTarget, target)
+			if bc != nil {
+				return standardRouting{route: standardRouteOtherToSourceToTargetToOther, beforeConverter: bc, afterConverter: ac}
+			}
 		}
 	}
 
@@ -183,24 +205,30 @@ func (o *StandardConversionOrchestrator) routing(c Converter, ctx LookupContext,
 	}
 
 	if o.OtherToTargetToSource != nil {
-		bc := o.findConverter(c, ctx, source, expectedTarget)
-		if o.isTypesMatch(expectedSource, target) && bc != nil {
-			return standardRouting{route: standardRouteOtherToTargetToSource, beforeConverter: bc}
+		if o.isTypesMatch(expectedSource, target) {
+			bc := o.findConverter(c, ctx, source, expectedTarget)
+			if bc != nil {
+				return standardRouting{route: standardRouteOtherToTargetToSource, beforeConverter: bc}
+			}
 		}
 	}
 
 	if o.TargetToSourceToOther != nil {
-		ac := o.findConverter(c, ctx, expectedSource, target)
-		if o.isTypesMatch(expectedTarget, source) && ac != nil {
-			return standardRouting{route: standardRouteSourceToTargetToOther, afterConverter: ac}
+		if o.isTypesMatch(expectedTarget, source) {
+			ac := o.findConverter(c, ctx, expectedSource, target)
+			if ac != nil {
+				return standardRouting{route: standardRouteSourceToTargetToOther, afterConverter: ac}
+			}
 		}
 	}
 
 	if o.OtherToTargetToSourceToOther != nil {
 		ac := o.findConverter(c, ctx, source, expectedTarget)
-		bc := o.findConverter(c, ctx, expectedSource, target)
-		if ac != nil && bc != nil {
-			return standardRouting{route: standardRouteOtherToTargetToSourceToOther, beforeConverter: bc, afterConverter: ac}
+		if ac != nil {
+			bc := o.findConverter(c, ctx, expectedSource, target)
+			if bc != nil {
+				return standardRouting{route: standardRouteOtherToTargetToSourceToOther, beforeConverter: bc, afterConverter: ac}
+			}
 		}
 	}
 	return standardRouting{route: standardRouteNone}

@@ -123,6 +123,8 @@ func (m *iMapperImpl) FromUser(in User) v1.User {
 var _ iMapper = (*iMapperImpl)(nil)
 ```
 
+[//]: # (EmitCode:examples/grpc/01-timestamp)
+
 ### Using other converter to convert to time.Time
 
 The timestamp converter use other to convert a type to time.Time, if
@@ -240,3 +242,5 @@ func (m *iMapperImpl) FromUser(in User) v1.User {
 
 var _ iMapper = (*iMapperImpl)(nil)
 ```
+
+[//]: # (EmitCode:examples/grpc/02-timestamps-with-other-converters)

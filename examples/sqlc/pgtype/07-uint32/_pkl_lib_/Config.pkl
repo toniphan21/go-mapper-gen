@@ -1,0 +1,225 @@
+@go.Package { name = "github.com/toniphan21/go-mapper-gen/internal/config" }
+module gomappergen.Config
+
+import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.11.1#/go.pkl"
+
+typealias PackagePath = String
+
+class Output {
+  package: String?
+  file_name: String?
+  test_file_name: String?
+}
+
+open class Base {
+  output: Output?
+}
+
+class BuiltInConverter {
+  enable_identical: Boolean = true
+  enable_slice: Boolean = true
+  enable_type_to_pointer: Boolean = true
+  enable_pointer_to_type: Boolean = true
+  enable_numeric: Boolean = true
+  enable_functions: Boolean = true
+
+  library: BuiltInLibraryConverter = new BuiltInLibraryConverter{}
+}
+
+class BuiltInLibraryConverter {
+  enable_grpc: Boolean = true
+  enable_pgtype: Boolean = true
+}
+
+class Converter {
+  built_in: BuiltInConverter = new BuiltInConverter {}
+  functions: Listing<String>?
+}
+
+class Fields {
+  match: "exact" | "ignore-case" = "ignore-case"
+
+  map: Mapping<String, String>?
+}
+
+/// Configuration for mapping between a specific source struct
+/// and a specific target struct.
+///
+/// Values defined here override corresponding values in `BaseMapper`
+/// when explicitly set. Unset (null) values fall back to the base
+/// configuration defaults.
+class MapperStruct {
+  /// Target package for the generated mapping code.
+  ///
+  /// Overrides package level target_pkg when set.
+  target_pkg: String?
+
+  /// Name of the target struct.
+  ///
+  /// If not set, the target struct name is inferred from context.
+  target_struct_name: String?
+
+  /// Source package containing the source struct.
+  ///
+  /// Overrides package level source_pkg when set.
+  source_pkg: String?
+
+  /// Name of the source struct.
+  ///
+  /// If not set, the source struct name is inferred from context.
+  source_struct_name: String?
+
+  /// Template for the source-to-target mapping function name.
+  ///
+  /// Overrides package level source_to_target_function_name when set.
+  source_to_target_function_name: String?
+
+  /// Template for the target-to-source mapping function name.
+  ///
+  /// Overrides package level source_from_target_function_name when set.
+  source_from_target_function_name: String?
+
+  /// Template for the decorator function name.
+  ///
+  /// Overrides package level decorate_function_name when set.
+  decorate_function_name: String?
+
+  /// Controls pointer usage in generated mapping code.
+  ///
+  /// - "none": Neither source nor target is treated as a pointer.
+  /// - "source-only": Source struct is passed as a pointer.
+  /// - "target-only": Target struct is returned or populated as a pointer.
+  /// - "both": Both source and target are pointers.
+  ///
+  pointer: "none" | "source-only" | "target-only" | "both" = "none"
+
+  /// Field-level mapping configuration.
+  ///
+  /// Controls how fields are matched and transformed between
+  /// source and target structs.
+  fields: Fields = new Fields {
+    match = "ignore-case"
+  }
+
+  /// Whether to prefer getter methods over direct field access
+  /// on the source struct.
+  ///
+  /// Overrides package level use_getter_if_available when set.
+  use_getter_if_available: Boolean?
+
+  /// Whether to generate source-to-target mapping code.
+  ///
+  /// When false, only target-to-source mapping is generated.
+  generate_source_to_target: Boolean = true
+
+  /// Whether to generate target-to-source mapping code.
+  ///
+  /// When false, only source-to-target mapping is generated.
+  generate_source_from_target: Boolean = true
+}
+
+/// Base configuration for mapper code generation.
+///
+/// This configuration controls *how* mappers are generated (types vs functions),
+/// naming conventions of generated symbols, decorator behavior, and package layout.
+open class BaseMapper extends Base {
+  /// Controls the overall generation strategy.
+  ///
+  /// - "types": Generates an interface, implementation struct, and constructor.
+  /// - "functions": Generates package-level mapping functions only (no interface or struct).
+  ///
+  /// Note: When mode = "functions", type-related naming options are ignored.
+  mode: "types" | "functions" = "types"
+
+  /// Name of the generated mapper interface.
+  ///
+  /// Used only when mode = "types".
+  /// Defaults to a non-exported name to avoid polluting consumer APIs.
+  interface_name: String = "iMapper"
+
+  /// Name of the generated mapper implementation struct.
+  ///
+  /// Used only when mode = "types".
+  implementation_name: String = "iMapperImpl"
+
+  /// Name of the constructor function for the mapper implementation.
+  ///
+  /// Used only when mode = "types".
+  constructor_name: String = "new_iMapper"
+
+  /// Default template for source-to-target mapping function names.
+  /// `{TargetStructName}` will be replaced with the actual target struct name.
+  ///
+  /// Can be overridden per struct.
+  source_to_target_function_name: String = "To{TargetStructName}"
+
+  /// Default template for target-to-source mapping function names.
+  /// `{TargetStructName}` will be replaced with the actual target struct name.
+  ///
+  /// Can be overridden per struct.
+  source_from_target_function_name: String = "From{TargetStructName}"
+
+  /// Controls whether and how decorators are generated.
+  ///
+  /// - "adaptive": Generate decorators only when customization hooks are needed.
+  /// - "always": Always generate decorator types.
+  /// - "never": Never generate decorators.
+  ///
+  decorator_mode: "adaptive" | "always" | "never" = "adaptive"
+
+  /// Name of the generated decorator interface.
+  ///
+  /// Used only when decorator_mode != "never"
+  decorator_interface_name: String = "iMapperDecorator"
+
+  /// Name of the no-op decorator implementation. Empty string
+  /// would skip the NoOp implementation.
+  ///
+  /// Used only when decorator_mode != "never"
+  decorator_noop_name: String = "iMapperDecoratorNoOp"
+
+  /// Template for the decorator function name.
+  ///
+  /// `{FunctionName}` will be replaced with the decorated function name.
+  decorate_function_name: String = "decorate{FunctionName}"
+
+  /// Default target package for generated mapper code.
+  ///
+  /// Defaults to the current package where generation is invoked.
+  target_pkg: String = "{CurrentPackage}"
+
+  /// Default source package containing input structs.
+  ///
+  /// Can be overridden per struct.
+  source_pkg: String
+
+  /// Mapping definitions for this package.
+  ///
+  /// Each entry describes how a source struct maps to a target struct.
+  structs: Mapping<String, MapperStruct>
+
+  /// Whether to prefer getter methods over direct field access
+  /// on source structs by default.
+  ///
+  /// Can be overridden per struct.
+  use_getter_if_available: Boolean = false
+
+  /// Whether to generate GoDoc comments for generated code.
+  generate_go_doc: Boolean = true
+}
+
+class Mapper extends BaseMapper {
+  priorities: Mapping<Int, BaseMapper>?
+}
+
+all: Base = new Base {
+  output {
+    package = "{CurrentPackageName}"
+    file_name = "gen_mapper.go"
+    test_file_name = "gen_mapper_test.go"
+  }
+}
+
+converter: Converter = new Converter {}
+
+packages: Mapping<PackagePath, Mapper>

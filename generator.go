@@ -88,7 +88,7 @@ func (mf *genMapFunc) appendUnconvertibleField(field string) {
 func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) error {
 	ctx := &converterContext{
 		Context:       context.Background(),
-		lookupContext: &lookupContext{},
+		lookupContext: newLookupContext(),
 		jenFile:       file,
 		parser:        parser,
 		logger:        logger,

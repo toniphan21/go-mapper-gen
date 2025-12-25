@@ -7,6 +7,10 @@ all {
 converter {
   built_in {
     enable_type_to_pointer = true
+
+    library {
+      enable_pgtype = false
+    }
   }
 
   functions {
