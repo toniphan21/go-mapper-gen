@@ -63,6 +63,12 @@ func (u *typeUtil) MatchNamedType(t types.Type, pkgPath, typeName string) bool {
 }
 
 func (u *typeUtil) IsIdentical(t1 types.Type, t2 types.Type) bool {
+	p1, ok1 := t1.(*types.Pointer)
+	p2, ok2 := t2.(*types.Pointer)
+	if ok1 && ok2 {
+		return u.IsIdentical(p1.Elem(), p2.Elem())
+	}
+
 	n1, ok1 := t1.(*types.Named)
 	n2, ok2 := t2.(*types.Named)
 	if !ok1 || !ok2 {

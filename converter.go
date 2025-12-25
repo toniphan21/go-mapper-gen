@@ -283,6 +283,12 @@ type ConverterOption struct {
 	EmitTraceComments bool
 }
 
+var defaultConverterOption = ConverterOption{}
+
+func SetConverterOption(opts ConverterOption) {
+	defaultConverterOption = opts
+}
+
 // ---
 
 type registeredConverter struct {

@@ -152,10 +152,8 @@ func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package
 		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetType)).Line())
 
 		for _, field := range mf.mappedFields {
-			opt := ConverterOption{}
-
 			ctx.resetLookupContext()
-			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
+			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, defaultConverterOption)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
 			}
@@ -284,10 +282,8 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetType)).Line())
 
 		for _, field := range mf.mappedFields {
-			opt := ConverterOption{}
-
 			ctx.resetLookupContext()
-			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
+			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, defaultConverterOption)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
 			}
@@ -556,12 +552,10 @@ func fillMapFunc(ctx *converterContext, mapFunc *genMapFunc, targetFields, sourc
 			converter:       converter,
 		}
 
-		opt := ConverterOption{}
-
 		// this is a run to check that converted code is nil or not if converted code is nil we
 		// consider it unconvertible. The main run is in generator... function.
 		ctx.resetLookupContext()
-		convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, opt)
+		convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol, defaultConverterOption)
 		if convertedCode == nil {
 			mapFunc.appendUnconvertibleField(field.targetFieldName)
 		}
