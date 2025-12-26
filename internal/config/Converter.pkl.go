@@ -5,4 +5,6 @@ type Converter struct {
 	BuiltIn BuiltInConverter `pkl:"built_in"`
 
 	Functions *[]string `pkl:"functions"`
+
+	Priorities []string `pkl:"priorities"`
 }

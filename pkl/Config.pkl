@@ -33,7 +33,23 @@ class BuiltInLibraryConverter {
 
 class Converter {
   built_in: BuiltInConverter = new BuiltInConverter {}
+
   functions: Listing<String>?
+
+  priorities: Listing<String> = new Listing {
+    "github.com/toniphan21/go-mapper-gen.identicalTypeConverter"
+    "github.com/toniphan21/go-mapper-gen.sliceConverter"
+    "github.com/toniphan21/go-mapper-gen.typeToPointerConverter"
+    "github.com/toniphan21/go-mapper-gen.pointerToTypeConverter"
+
+    "github.com/toniphan21/go-mapper-gen/converters/pgtype.*"
+    "github.com/toniphan21/go-mapper-gen/converters/grpc.*"
+
+    "*"
+
+    "github.com/toniphan21/go-mapper-gen.functionsConverter"
+    "github.com/toniphan21/go-mapper-gen.numericConverter"
+  }
 }
 
 class Fields {

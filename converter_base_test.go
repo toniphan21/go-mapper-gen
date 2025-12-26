@@ -319,9 +319,9 @@ func Test_sliceConverter(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			converter := &sliceConverter{}
-			registerConverter(&identicalTypeConverter{}, 0, true)
-			registerConverter(&typeToPointerConverter{}, 1, true)
-			registerConverter(&pointerToTypeConverter{}, 2, true)
+			registerBuiltInConverter(&identicalTypeConverter{}, 0)
+			registerBuiltInConverter(&typeToPointerConverter{}, 1)
+			registerBuiltInConverter(&pointerToTypeConverter{}, 2)
 
 			Test.RunConverterTestCase(t, tc, converter)
 		})

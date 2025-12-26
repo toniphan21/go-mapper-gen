@@ -37,12 +37,10 @@ func runGenerate(cmd GenerateCmd, logger *slog.Logger) error {
 	gen.RegisterBuiltinConverters(parsedConfig.BuiltInConverters)
 	loadLibraryConverters(parsedConfig.LibraryConverters)
 
+	generator := gen.New(parser, *parsedConfig, gen.WithLogger(logger), gen.WithFileManager(fm))
+
 	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
 	gen.PrintRegisteredConverters(logger)
-
-	gen.InitAllRegisteredConverters(parser, *parsedConfig)
-
-	generator := gen.New(parser, gen.WithLogger(logger), gen.WithFileManager(fm))
 
 	for _, pkg := range parser.SourcePackages() {
 		pkgPath := pkg.PkgPath

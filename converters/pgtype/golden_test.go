@@ -18,7 +18,9 @@ func TestGolden(t *testing.T) {
 		printActual bool
 		printDiff   bool
 	}{
+		{file: "features/bool.md"},
 		{file: "features/numeric.md"},
+		{file: "features/text.md"},
 	}
 
 	for _, tc := range cases {

@@ -18,7 +18,9 @@ type Options struct {
 
 type OptionFunc func(*Options)
 
-func New(parser Parser, options ...OptionFunc) Generator {
+func New(parser Parser, config Config, options ...OptionFunc) Generator {
+	initRegisteredConverters(parser, config)
+
 	o := &Options{
 		Parser:      parser,
 		FileManager: DefaultFileManager(),

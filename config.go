@@ -13,10 +13,11 @@ import (
 )
 
 type Config struct {
-	BuiltInConverters  BuiltInConverterConfig
-	LibraryConverters  LibraryConverterConfig
-	ConverterFunctions []ConvertFunctionConfig
-	Packages           map[string][]PackageConfig
+	BuiltInConverters   BuiltInConverterConfig
+	LibraryConverters   LibraryConverterConfig
+	ConverterFunctions  []ConvertFunctionConfig
+	ConverterPriorities []string
+	Packages            map[string][]PackageConfig
 }
 
 type Output struct {
@@ -205,10 +206,11 @@ func ParseConfig(path string) (*Config, error) {
 	}
 
 	return &Config{
-		BuiltInConverters:  m.mapBuiltInConverterConfig(cfg.Converter.BuiltIn),
-		LibraryConverters:  m.mapLibraryConverterConfig(cfg.Converter.BuiltIn),
-		ConverterFunctions: m.mapConverterFunctions(cfg.Converter.Functions),
-		Packages:           pkgConfigs,
+		BuiltInConverters:   m.mapBuiltInConverterConfig(cfg.Converter.BuiltIn),
+		LibraryConverters:   m.mapLibraryConverterConfig(cfg.Converter.BuiltIn),
+		ConverterFunctions:  m.mapConverterFunctions(cfg.Converter.Functions),
+		ConverterPriorities: cfg.Converter.Priorities,
+		Packages:            pkgConfigs,
 	}, nil
 }
 

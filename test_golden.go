@@ -155,13 +155,12 @@ func (h *goldenTest) RunGoldenTestCase(t *testing.T, tc GoldenTestCase, opts ...
 	}
 
 	o.SetupConverter()
-	InitAllRegisteredConverters(parser, *config)
 
 	outputs := make(map[string]string)
 	UseTestVersion()
 	fm := DefaultFileManager()
 
-	generator := New(parser, WithFileManager(fm), WithLogger(NewNoopLogger()))
+	generator := New(parser, *config, WithFileManager(fm), WithLogger(NewNoopLogger()))
 
 	for _, pkg := range parser.SourcePackages() {
 		pkgPath := pkg.PkgPath

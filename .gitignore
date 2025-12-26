@@ -1,4 +1,6 @@
 .idea
 bin
+/pkl/.out
 /go-mapper-gen
 /generator
+/test-pkl

@@ -311,6 +311,6 @@ var _ iMapperDecorator = (*iMapperDecoratorNoOp)(nil)
 
 	Test.RunGoldenTestCase(t, tc, TestWithSetupConverter(func() {
 		ClearAllRegisteredConverters()
-		RegisterConverter(&dummyConverter{}, 0)
+		RegisterConverter(&dummyConverter{})
 	}))
 }

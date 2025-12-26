@@ -102,10 +102,10 @@ func Test_functionsConverter_UseFunctions(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			registerConverter(&identicalTypeConverter{}, 0, true)
-			registerConverter(&sliceConverter{}, 1, true)
-			registerConverter(&typeToPointerConverter{}, 2, true)
-			registerConverter(&pointerToTypeConverter{}, 3, true)
+			registerBuiltInConverter(&identicalTypeConverter{}, 0)
+			registerBuiltInConverter(&sliceConverter{}, 1)
+			registerBuiltInConverter(&typeToPointerConverter{}, 2)
+			registerBuiltInConverter(&pointerToTypeConverter{}, 3)
 
 			converter := &functionsConverter{}
 			Test.RunConverterTestCase(t, tc, converter)
@@ -215,10 +215,10 @@ func Test_functionsConverter_UseMethodsInVariable(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			registerConverter(&identicalTypeConverter{}, 0, true)
-			registerConverter(&sliceConverter{}, 1, true)
-			registerConverter(&typeToPointerConverter{}, 2, true)
-			registerConverter(&pointerToTypeConverter{}, 3, true)
+			registerBuiltInConverter(&identicalTypeConverter{}, 0)
+			registerBuiltInConverter(&sliceConverter{}, 1)
+			registerBuiltInConverter(&typeToPointerConverter{}, 2)
+			registerBuiltInConverter(&pointerToTypeConverter{}, 3)
 
 			converter := &functionsConverter{}
 			Test.RunConverterTestCase(t, tc, converter)
@@ -332,10 +332,10 @@ func Test_functionsConverter_Use_Functions_And_MethodsInVariable(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			registerConverter(&identicalTypeConverter{}, 0, true)
-			registerConverter(&sliceConverter{}, 1, true)
-			registerConverter(&typeToPointerConverter{}, 2, true)
-			registerConverter(&pointerToTypeConverter{}, 3, true)
+			registerBuiltInConverter(&identicalTypeConverter{}, 0)
+			registerBuiltInConverter(&sliceConverter{}, 1)
+			registerBuiltInConverter(&typeToPointerConverter{}, 2)
+			registerBuiltInConverter(&pointerToTypeConverter{}, 3)
 
 			converter := &functionsConverter{}
 			Test.RunConverterTestCase(t, tc, converter)
