@@ -109,7 +109,6 @@ func (h *goldenTest) SetupGoldenTestCaseForPackage(t *testing.T, tc GoldenTestCa
 }
 
 func (h *goldenTest) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parser, *Config) {
-	// TODO: handle pkl file which is used in production with pkl package
 	config, err := h.configFromPklDevFileContent(t, tc.PklDevFileContent)
 	require.NoError(t, err, "cannot set up pkl config file")
 

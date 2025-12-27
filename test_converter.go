@@ -191,7 +191,11 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 		expected = append(expected, "\tsource := in.sourceField")
 	}
 	for _, v := range tc.ExpectedCode {
-		expected = append(expected, "\t"+v)
+		if v != "" {
+			expected = append(expected, "\t"+v)
+		} else {
+			expected = append(expected, v)
+		}
 	}
 	if tc.TargetSymbolWithoutFieldName {
 		expected = append(expected, "\tout.targetField = target")

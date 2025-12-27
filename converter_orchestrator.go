@@ -2,6 +2,8 @@ package gomappergen
 
 import (
 	"go/types"
+	"reflect"
+	"strings"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -17,6 +19,33 @@ type TypeInfo struct {
 	PkgName   string
 	TypeName  string
 	IsPointer bool
+}
+
+func MakeTypeInfo(in any) TypeInfo {
+	result := TypeInfo{}
+
+	t := reflect.TypeOf(in)
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		result.IsPointer = true
+	}
+
+	result.PkgPath = t.PkgPath()
+	result.PkgName = getRealPkgName(t)
+	result.TypeName = t.Name()
+
+	return result
+}
+
+func getRealPkgName(t reflect.Type) string {
+	s := t.String()
+
+	s = strings.TrimLeft(s, "*")
+
+	if dot := strings.LastIndex(s, "."); dot != -1 {
+		return s[:dot]
+	}
+	return ""
 }
 
 func (ti TypeInfo) ToType() types.Type {

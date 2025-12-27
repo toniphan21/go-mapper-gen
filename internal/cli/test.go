@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/toniphan21/go-mapper-gen/internal/setup"
 	"github.com/toniphan21/go-mapper-gen/internal/setup/file"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
+	"github.com/toniphan21/go-mapper-gen/pkl"
 )
 
 const maxCountToHideSetup = 10
@@ -247,20 +247,8 @@ func (r *testRunner) runTestCase(cmd TestCmd, mdTestCase gen.MarkdownTestCase, t
 	setupOk := true
 
 	if mdTestCase.PklDevFileContent != nil {
-		pklLibFiles := setup.PklLibFiles()
-		for _, v := range pklLibFiles {
-			fp := path.Join("_pkl_lib_", v.FilePath())
-			r.logInfo("\t\tcopied pkl lib file " + v.FilePath() + " to " + fp)
-
-			if err := r.writeTestFile(tempDir, fp, v.FileContent()); err != nil {
-				r.logError("\t\t" + util.ColorRed(err.Error()))
-				setupOk = false
-				return false
-			}
-		}
-
 		configFile := file.MakePklDevConfigFile(
-			"./_pkl_lib_/Config.pkl",
+			pkl.AmendsPath(),
 			"mapper.pkl",
 			[]string{string(mdTestCase.PklDevFileContent)},
 		)

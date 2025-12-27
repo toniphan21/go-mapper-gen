@@ -18,7 +18,6 @@ func (c *identicalTypeConverter) Init(_ Parser, _ Config) {
 func (c *identicalTypeConverter) Info() ConverterInfo {
 	return ConverterInfo{
 		Name:                 "built-in identicalTypeConverter",
-		Description:          "",
 		ShortForm:            "T -> T",
 		ShortFormDescription: "direct value copy",
 	}
@@ -48,7 +47,6 @@ func (c *typeToPointerConverter) Init(_ Parser, _ Config) {
 func (c *typeToPointerConverter) Info() ConverterInfo {
 	return ConverterInfo{
 		Name:                 "built-in typeToPointerConverter",
-		Description:          "",
 		ShortForm:            "T -> *T",
 		ShortFormDescription: "address-of; skipped for interface types",
 	}
@@ -78,7 +76,6 @@ func (c *pointerToTypeConverter) Init(_ Parser, _ Config) {
 func (c *pointerToTypeConverter) Info() ConverterInfo {
 	return ConverterInfo{
 		Name:                 "built-in pointerToTypeConverter",
-		Description:          "",
 		ShortForm:            "*T -> T",
 		ShortFormDescription: "nil-check + dereference; uses zero value when nil; skipped for interface types",
 	}
@@ -121,7 +118,6 @@ func (c *sliceConverter) Init(_ Parser, _ Config) {
 func (c *sliceConverter) Info() ConverterInfo {
 	return ConverterInfo{
 		Name:                 "built-in sliceConverter",
-		Description:          "",
 		ShortForm:            "[]T -> []V",
 		ShortFormDescription: "slice conversion; requires converter for T -> V",
 	}

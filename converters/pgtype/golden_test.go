@@ -8,7 +8,7 @@ import (
 	gen "github.com/toniphan21/go-mapper-gen"
 )
 
-//go:embed features/*.md
+//go:embed testdata/*.md
 var goldenMarkdownFiles embed.FS
 
 func TestGolden(t *testing.T) {
@@ -18,9 +18,19 @@ func TestGolden(t *testing.T) {
 		printActual bool
 		printDiff   bool
 	}{
-		{file: "features/bool.md"},
-		{file: "features/numeric.md"},
-		{file: "features/text.md"},
+		{file: "testdata/bool.md"},
+		{file: "testdata/float4.md"},
+		{file: "testdata/float8.md"},
+		{file: "testdata/int2.md"},
+		{file: "testdata/int4.md"},
+		{file: "testdata/int8.md"},
+		{file: "testdata/uint32.md"},
+		{file: "testdata/uint64.md"},
+		{file: "testdata/text.md"},
+		{file: "testdata/date.md"},
+		{file: "testdata/time.md"},
+		{file: "testdata/timestamp.md"},
+		{file: "testdata/timestamptz.md"},
 	}
 
 	for _, tc := range cases {

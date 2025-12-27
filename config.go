@@ -38,6 +38,7 @@ type BuiltInConverterConfig struct {
 type LibraryConverterConfig struct {
 	UseGRPC   bool
 	UsePGType bool
+	UseSQL    bool
 }
 
 func (c *BuiltInConverterConfig) EnableAll() {
@@ -231,6 +232,7 @@ func (m *configMapper) mapLibraryConverterConfig(in config.BuiltInConverter) Lib
 	return LibraryConverterConfig{
 		UseGRPC:   in.Library.EnableGrpc,
 		UsePGType: in.Library.EnablePgtype,
+		UseSQL:    in.Library.EnableSql,
 	}
 }
 

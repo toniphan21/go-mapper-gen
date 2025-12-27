@@ -199,7 +199,6 @@ var _ LookupContext = (*converterContext)(nil)
 // in generated code.
 type ConverterInfo struct {
 	Name                 string
-	Description          string
 	ShortForm            string
 	ShortFormDescription string
 }

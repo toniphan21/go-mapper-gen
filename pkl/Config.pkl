@@ -29,6 +29,7 @@ class BuiltInConverter {
 class BuiltInLibraryConverter {
   enable_grpc: Boolean = true
   enable_pgtype: Boolean = true
+  enable_sql: Boolean = true
 }
 
 class Converter {
@@ -41,13 +42,14 @@ class Converter {
     "github.com/toniphan21/go-mapper-gen.sliceConverter"
     "github.com/toniphan21/go-mapper-gen.typeToPointerConverter"
     "github.com/toniphan21/go-mapper-gen.pointerToTypeConverter"
+    "github.com/toniphan21/go-mapper-gen.functionsConverter"
 
     "github.com/toniphan21/go-mapper-gen/converters/pgtype.*"
+    "github.com/toniphan21/go-mapper-gen/converters/sql.*"
     "github.com/toniphan21/go-mapper-gen/converters/grpc.*"
 
     "*"
 
-    "github.com/toniphan21/go-mapper-gen.functionsConverter"
     "github.com/toniphan21/go-mapper-gen.numericConverter"
   }
 }

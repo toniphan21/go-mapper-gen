@@ -1,0 +1,167 @@
+package pgtype
+
+import (
+	"go/types"
+
+	"github.com/dave/jennifer/jen"
+	gen "github.com/toniphan21/go-mapper-gen"
+)
+
+const pgtypePkgPath = "github.com/jackc/pgx/v5/pgtype"
+
+type baseConverter[T, V any] struct {
+	ValuePropertyName string
+	ValidPropertyName *string
+
+	Name                 string
+	ShortForm            string
+	ShortFormDescription string
+
+	generatedType T
+	targetType    V
+	orchestrator  gen.GeneratedTypeOrchestrator
+
+	targetedType types.Type
+	pgtypeName   string
+}
+
+func (b *baseConverter[T, V]) Init(parser gen.Parser, config gen.Config) {
+	generated := gen.MakeTypeInfo(b.generatedType)
+	target := gen.MakeTypeInfo(b.targetType)
+	b.pgtypeName = generated.TypeName
+	b.targetedType = target.ToType()
+	b.orchestrator = gen.GeneratedTypeOrchestrator{
+		Generated:                generated,
+		Target:                   target,
+		GeneratedToTarget:        b.pgtypeToTarget,
+		GeneratedToTargetToOther: b.pgtypeToTargetToOther,
+		TargetToGenerated:        b.targetToPgType,
+		OtherToTargetToGenerated: b.otherToTargetToPGType,
+	}
+}
+
+func (b *baseConverter[T, V]) Info() gen.ConverterInfo {
+	return gen.ConverterInfo{
+		Name:                 b.Name,
+		ShortForm:            b.ShortForm,
+		ShortFormDescription: b.ShortFormDescription,
+	}
+}
+
+func (b *baseConverter[T, V]) CanConvert(ctx gen.LookupContext, targetType, sourceType types.Type) bool {
+	return b.orchestrator.CanConvert(b, ctx, targetType, sourceType)
+}
+
+func (b *baseConverter[T, V]) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+	return ctx.Run(b, opts, func() jen.Code {
+		return b.orchestrator.PerformConvert(b, ctx, target, source, opts)
+	})
+}
+
+func (b *baseConverter[T, V]) pgtypeToTarget(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+	/** generated code:
+	if {source}.[[ValidPropertyName]] {
+		{target} = &{source}.[[ValuePropertyName]]
+	}
+	*/
+	validName := "Valid"
+	if b.ValidPropertyName != nil {
+		validName = *b.ValidPropertyName
+	}
+
+	return jen.If(source.Expr().Dot(validName)).BlockFunc(func(g *jen.Group) {
+		g.Add(target.Expr()).Op("=").Op("&").Add(source.Expr().Dot(b.ValuePropertyName))
+	})
+}
+
+func (b *baseConverter[T, V]) pgtypeToTargetToOther(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter, opts gen.ConverterOption) jen.Code {
+	/** generated code:
+	var v0 [[Target]]
+	if {source}.[[ValidPropertyName]] {
+		v0 = &{source}.[[ValuePropertyName]]
+	}
+
+	// other converter converts v0 to target
+	*/
+	validName := "Valid"
+	if b.ValidPropertyName != nil {
+		validName = *b.ValidPropertyName
+	}
+
+	// first convert b.Generated to b.Target hold in a temporary variable
+	varName := ctx.NextVarName()
+	code := jen.Line().Var().Id(varName).Add(gen.GeneratorUtil.TypeToJenCode(b.targetedType)).Line()
+
+	code = code.If(source.Expr().Dot(validName)).BlockFunc(func(g *jen.Group) {
+		g.Add(jen.Id(varName)).Op("=").Op("&").Add(source.Expr().Dot(b.ValuePropertyName))
+	}).Line()
+
+	// then call other converter to convert the variable to target
+	sourceSymbol := gen.Symbol{VarName: varName, Type: b.targetedType}
+	convertedCode := oc.ConvertField(ctx, target, sourceSymbol, opts)
+	if convertedCode == nil {
+		return nil
+	}
+	return code.Add(convertedCode).Line()
+}
+
+func (b *baseConverter[T, V]) targetToPgType(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+	/** generated code:
+	if {source} != nil {
+		{target} = pgtype.[[pgtypeName]]{[[ValuePropertyName]]: *{source}, [[ValidPropertyName]]: true}
+	}
+	*/
+	validName := "Valid"
+	if b.ValidPropertyName != nil {
+		validName = *b.ValidPropertyName
+	}
+
+	code := jen.If(source.Expr().Op("!=").Nil())
+	code = code.BlockFunc(func(g *jen.Group) {
+		g.Add(target.Expr()).Op("=").Add(
+			jen.Qual(pgtypePkgPath, b.pgtypeName).Values(jen.DictFunc(func(d jen.Dict) {
+				d[jen.Id(b.ValuePropertyName)] = jen.Op("*").Add(source.Expr())
+				d[jen.Id(validName)] = jen.Lit(true)
+			})),
+		)
+	})
+
+	return code
+}
+
+func (b *baseConverter[T, V]) otherToTargetToPGType(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter, opts gen.ConverterOption) jen.Code {
+	/** generated code:
+	var v0 [[Target]]
+	// other converter converts source to v0
+
+	if v0 != nil {
+		{target} = pgtype.[[pgtypeName]]{[[ValuePropertyName]]: *v0, [[ValidPropertyName]]: true}
+	}
+	*/
+	validName := "Valid"
+	if b.ValidPropertyName != nil {
+		validName = *b.ValidPropertyName
+	}
+
+	// first convert source to [[Target]] hold in a temporary variable
+	varName := ctx.NextVarName()
+	code := jen.Line().Var().Id(varName).Add(gen.GeneratorUtil.TypeToJenCode(b.targetedType)).Line()
+	targetSymbol := gen.Symbol{VarName: varName, Type: b.targetedType, Metadata: gen.SymbolMetadata{IsVariable: true}}
+	convertedCode := oc.ConvertField(ctx, targetSymbol, source, opts)
+	if convertedCode == nil {
+		return nil
+	}
+	code.Add(convertedCode).Line()
+
+	// then convert variable to target
+	code = code.Add(jen.If(jen.Id(varName).Op("!=").Nil()))
+	code = code.BlockFunc(func(g *jen.Group) {
+		g.Add(target.Expr()).Op("=").Add(
+			jen.Qual(pgtypePkgPath, b.pgtypeName).Values(jen.DictFunc(func(d jen.Dict) {
+				d[jen.Id(b.ValuePropertyName)] = jen.Op("*").Add(jen.Id(varName))
+				d[jen.Id(validName)] = jen.Lit(true)
+			})),
+		)
+	})
+	return code
+}

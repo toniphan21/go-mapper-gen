@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"path"
 	"reflect"
 	"slices"
 	"sort"
 	"strconv"
 
+	"github.com/IGLOU-EU/go-wildcard"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
@@ -41,7 +41,7 @@ func RegisterConverter(converter Converter) {
 		converter:     converter,
 		typ:           normalizeConverterType(converter),
 		qualifiedName: qualifiedName(converter),
-		priority:      0,
+		priority:      len(globalConverters) + 1,
 		builtIn:       false,
 	})
 }
@@ -89,17 +89,12 @@ func qualifiedName(v Converter) string {
 func matchConverterPriority(config []string, qualifiedName string) (bool, int) {
 	var matched = make(map[int]int) // index -> pattern-length
 	for i, pattern := range config {
-		if pattern == "*" {
-			matched[i] = 1
-		}
-
 		if pattern == qualifiedName {
 			matched[i] = len(pattern)
 			continue
 		}
 
-		m, _ := path.Match(pattern, qualifiedName)
-		if m {
+		if wildcard.Match(pattern, qualifiedName) {
 			matched[i] = len(pattern)
 		}
 	}

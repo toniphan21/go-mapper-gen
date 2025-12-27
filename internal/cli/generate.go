@@ -8,6 +8,7 @@ import (
 	gen "github.com/toniphan21/go-mapper-gen"
 	"github.com/toniphan21/go-mapper-gen/converters/grpc"
 	"github.com/toniphan21/go-mapper-gen/converters/pgtype"
+	"github.com/toniphan21/go-mapper-gen/converters/sql"
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
@@ -66,5 +67,8 @@ func loadLibraryConverters(cf gen.LibraryConverterConfig) {
 	}
 	if cf.UsePGType {
 		pgtype.RegisterConverters()
+	}
+	if cf.UseSQL {
+		sql.RegisterConverters()
 	}
 }
