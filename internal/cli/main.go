@@ -15,9 +15,9 @@ const defaultConfigFileName = "mapper.pkl"
 type VersionCmd struct{}
 
 type GenerateCmd struct {
-	WorkingDir string `arg:"-w,--working-dir" help:"Base directory" default:"." placeholder:"DIR"`
-
+	WorkingDir     string `arg:"-w,--working-dir" help:"Base directory" default:"." placeholder:"DIR"`
 	ConfigFileName string `arg:"-c,--config" help:"Config file name" default:"mapper.pkl" placeholder:"NAME"`
+	DryRun         bool   `arg:"-d,--dry-run" help:"Preview changes without writing to disk"`
 }
 
 type TestCmd struct {
@@ -87,6 +87,7 @@ func Run(args Args) {
 		handleError(runGenerate(GenerateCmd{
 			WorkingDir:     absPath,
 			ConfigFileName: defaultConfigFileName,
+			DryRun:         args.Generate.DryRun,
 		}, logger))
 
 	default:
@@ -97,6 +98,7 @@ func Run(args Args) {
 		handleError(runGenerate(GenerateCmd{
 			WorkingDir:     wd,
 			ConfigFileName: defaultConfigFileName,
+			DryRun:         false,
 		}, logger))
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/toniphan21/go-mapper-gen/internal/util"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -100,6 +101,7 @@ func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package,
 	}
 
 	if len(mapFuncs) == 0 {
+		logger.Info("\tthere is no structs matched with configuration.")
 		return nil
 	}
 
@@ -107,18 +109,26 @@ func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package,
 		return strings.Compare(a.name, b.name)
 	})
 
+	logger.Info(fmt.Sprintf("\tthere are %d map functions matched with configuration.", len(mapFuncs)))
+	for _, mf := range mapFuncs {
+		logger.Info(fmt.Sprintf("\t\t- %s(%s) %s", util.ColorBlue(mf.funcName), mf.sourceType.String(), mf.targetType.String()))
+	}
+
 	switch config.Mode {
 	case ModeFunctions:
+		logger.Info("\tgenerating mode functions...")
 		generateMapperFunctions(ctx, currentPkg, config, mapFuncs)
 
 	default:
-		generateMapperInterface(file, currentPkg, config, mapFuncs)
-		generateDecoratorInterface(ctx, config, mapFuncs)
-		generateMapperConstructor(ctx, config, mapFuncs)
-		generateMapperImplementation(ctx, config, mapFuncs)
-		generateDecoratorNoOp(ctx, config, mapFuncs)
-		generateCompileTimeCheck(file, config, mapFuncs)
+		logger.Info("\tgenerating mode types...")
+		generateMapperInterface(file, currentPkg, config, mapFuncs, logger)
+		generateDecoratorInterface(ctx, config, mapFuncs, logger)
+		generateMapperConstructor(ctx, config, mapFuncs, logger)
+		generateMapperImplementation(ctx, config, mapFuncs, logger)
+		generateDecoratorNoOp(ctx, config, mapFuncs, logger)
+		generateCompileTimeCheck(file, config, mapFuncs, logger)
 	}
+	logger.Info("\tfinished")
 
 	return nil
 }
@@ -208,7 +218,7 @@ func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package
 	}
 }
 
-func generateMapperInterface(file *jen.File, currentPkg *packages.Package, config PackageConfig, mapFuncs []*genMapFunc) {
+func generateMapperInterface(file *jen.File, currentPkg *packages.Package, config PackageConfig, mapFuncs []*genMapFunc, logger *slog.Logger) {
 	var signatures []jen.Code
 
 	for _, mf := range mapFuncs {
@@ -228,9 +238,10 @@ func generateMapperInterface(file *jen.File, currentPkg *packages.Package, confi
 	}
 
 	file.Type().Id(config.InterfaceName).Interface(signatures...).Line().Line()
+	logger.Info(fmt.Sprintf("\tgenerated interface %s", util.ColorBlue(config.InterfaceName)))
 }
 
-func generateDecoratorInterface(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
+func generateDecoratorInterface(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc, logger *slog.Logger) {
 	if !shouldUseDecorator(mapFuncs, config) {
 		return
 	}
@@ -246,9 +257,10 @@ func generateDecoratorInterface(ctx *converterContext, config PackageConfig, map
 	}
 
 	ctx.jenFile.Type().Id(config.DecoratorInterfaceName).Interface(signatures...).Line().Line()
+	logger.Info(fmt.Sprintf("\tgenerated decorator interface %s", util.ColorBlue(config.DecoratorInterfaceName)))
 }
 
-func generateMapperConstructor(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
+func generateMapperConstructor(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc, logger *slog.Logger) {
 	var params, body []jen.Code
 
 	if shouldUseDecorator(mapFuncs, config) {
@@ -261,9 +273,10 @@ func generateMapperConstructor(ctx *converterContext, config PackageConfig, mapF
 	}
 
 	ctx.jenFile.Func().Id(config.ConstructorName).Params(params...).Params(jen.Id(config.InterfaceName)).Block(body...)
+	logger.Info(fmt.Sprintf("\tgenerated constructor %s", util.ColorBlue(config.ConstructorName)))
 }
 
-func generateMapperImplementation(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
+func generateMapperImplementation(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc, logger *slog.Logger) {
 	file := ctx.JenFile()
 	if shouldUseDecorator(mapFuncs, config) {
 		file.Type().Id(config.ImplementationName).Struct(
@@ -338,9 +351,10 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 			Block(body...).
 			Line()
 	}
+	logger.Info(fmt.Sprintf("\tgenerated implementation %s", util.ColorBlue(config.ImplementationName)))
 }
 
-func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc) {
+func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs []*genMapFunc, logger *slog.Logger) {
 	if !shouldUseDecorator(mapFuncs, config) || config.DecoratorNoOpName == "" {
 		return
 	}
@@ -367,15 +381,18 @@ func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs
 			Block(body...).
 			Line()
 	}
+	logger.Info(fmt.Sprintf("\tgenerated noop decorator %s", util.ColorBlue(config.DecoratorNoOpName)))
 }
 
-func generateCompileTimeCheck(file *jen.File, config PackageConfig, mapFuncs []*genMapFunc) {
+func generateCompileTimeCheck(file *jen.File, config PackageConfig, mapFuncs []*genMapFunc, logger *slog.Logger) {
 	file.Var().Id("_").Id(config.InterfaceName).Op("=").Parens(jen.Op("*").Id(config.ImplementationName)).Parens(jen.Nil())
 
 	if !shouldUseDecorator(mapFuncs, config) || config.DecoratorNoOpName == "" {
+		logger.Info(fmt.Sprintf("\tgenerated compile time check"))
 		return
 	}
 	file.Var().Id("_").Id(config.DecoratorInterfaceName).Op("=").Parens(jen.Op("*").Id(config.DecoratorNoOpName)).Parens(jen.Nil())
+	logger.Info(fmt.Sprintf("\tgenerated compile time check"))
 }
 
 func makeMissingAndUnconvertibleFields(mf *genMapFunc) []jen.Code {
@@ -420,7 +437,7 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 		targetStruct, ok := ctx.Parser().FindStruct(replacePlaceholders(cf.TargetPkgPath, vars), cf.TargetStructName)
 		if !ok {
 			logger.Warn(
-				"could not find target struct ",
+				"\tcannot find target struct",
 				slog.String("target_struct_name", cf.TargetStructName),
 				slog.String("target_pkg", cf.TargetPkgPath),
 			)
@@ -430,7 +447,7 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 		sourceStruct, ok := ctx.Parser().FindStruct(replacePlaceholders(cf.SourcePkgPath, vars), cf.SourceStructName)
 		if !ok {
 			logger.Warn(
-				"could not find source struct ",
+				"\tcould not find source struct",
 				slog.String("source_struct_name", cf.SourceStructName),
 				slog.String("source_pkg", cf.SourcePkgPath),
 			)

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -15,7 +16,11 @@ import (
 const appName = "go-mapper-gen"
 
 func runGenerate(cmd GenerateCmd, logger *slog.Logger) error {
-	logger.Info(util.ColorGreen(appName) + " " + gen.Version())
+	if cmd.DryRun {
+		logger.Info(util.ColorGreen(appName) + " " + gen.Version() + " in DRY mode")
+	} else {
+		logger.Info(util.ColorGreen(appName) + " " + gen.Version())
+	}
 	logger.Info(util.ColorGreen(appName) + " is working on directory: " + util.ColorCyan(cmd.WorkingDir))
 
 	cff := filepath.Join(cmd.WorkingDir, defaultConfigFileName)
@@ -43,21 +48,43 @@ func runGenerate(cmd GenerateCmd, logger *slog.Logger) error {
 	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
 	gen.PrintRegisteredConverters(logger)
 
+	logger.Info(util.ColorGreen(appName) + " initiated successfully")
+
 	for _, pkg := range parser.SourcePackages() {
 		pkgPath := pkg.PkgPath
 		configs, have := parsedConfig.Packages[pkgPath]
 		if !have {
+			logger.Debug(fmt.Sprintf("package %s has no config, skipped", util.ColorCyan(pkgPath)))
 			continue
 		}
 
-		_ = generator.Generate(pkg, configs)
+		logger.Info(util.ColorGreen(appName)+" is generating for package %s", util.ColorCyan(pkgPath))
+		err = generator.Generate(pkg, configs)
+		if err != nil {
+			logger.Error(fmt.Sprintf("cannot generate for package %s: %s", util.ColorCyan(pkgPath), util.ColorRed(err.Error())))
+		}
 	}
 
 	outs := fm.JenFiles()
-	for p, out := range outs {
-		rp := filepath.Join(cmd.WorkingDir, p)
-		_ = os.WriteFile(rp, []byte(out.GoString()), 0644)
+	if cmd.DryRun {
+		logger.Info(util.ColorGreen(appName) + " is printing generated file content")
+		for p, out := range outs {
+			rp := filepath.Join(cmd.WorkingDir, p)
+			logger.Info(util.ColorGreen(appName) + " will generated to file " + util.ColorBlue(rp))
+			util.PrintFileWithFunction(p, []byte(out.GoString()), func(l string) {
+				logger.Info(l)
+			})
+		}
+	} else {
+		logger.Info(util.ColorGreen(appName) + " is saving generated file to disk")
+		for p, out := range outs {
+			rp := filepath.Join(cmd.WorkingDir, p)
+			_ = os.WriteFile(rp, []byte(out.GoString()), 0644)
+			logger.Info(util.ColorGreen(appName) + " saved to file " + util.ColorBlue(rp))
+		}
 	}
+
+	logger.Info("")
 	return nil
 }
 
