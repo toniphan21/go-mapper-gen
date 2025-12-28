@@ -1,22 +1,20 @@
 ## go-mapper-gen
-A type-safe code generator for Go that automates the mapping between different struct types (e.g., Domain Entities to
-Database Models). Powered by Pkl for a modern, schema-driven configuration experience.
+
+A type-safe code generator for Go that automates mappings between different struct types (e.g., domain entities ↔︎ DB
+models). It’s powered by [pkl-lang](https://pkl-lang.org) for a modern, schema-driven configuration experience with validation and IDE completion.
 
 ### 💡 Why go-mapper-gen?
 
-Manually writing `ToEntity` and `FromEntity` functions is tedious and error-prone. This tool generates those mappings
-for you, handling basic types automatically and allowing custom logic for complex transformations.
+- Flexible generation modes: emit package-level functions or interface + implementation types.
+- pkl-powered configuration with strong typing and validation.
+- Pluggable converters for complex field transformations (gRPC, pgtype, SQL, numeric, pointers, slices, etc.).
+- Type safety: compile-time analysis of your Go source ensures invalid mappings fail at generation time, not runtime.
 
-- **Flexible Mapping Modes**: generate standalone conversion functions or group them as methods of an interface.
-- **Pkl-Powered Config**: use [Apple’s Pkl language](https://pkl-lang.org) for configuration
-  with full IDE auto-suggestion, validation, and strong typing.
-- **Custom Conversions**: Define custom function calls for fields that require more than a simple type cast.
-- **Type Safety**: The generator analyzes your Go source types to ensure mappings are valid at generation time, not runtime.
+---
 
+### 🛠 Quickstart
 
-### 🛠 Features in Action
-
-Firstly, let set up a project which uses [sqlc](https://sqlc.dev) and pgtype
+Firstly, let set up a project which uses sqlc and pgtype
 
 ```go.mod
 module github.com/toniphan21/go-mapper-gen/basic
@@ -42,11 +40,11 @@ Given that you have an entity located in your `/domain`:
 package domain
 
 type User struct {
-	ID   	  string
-	FirstName string
-	LastName  string
-	Email     string
-	Password  *string
+    ID        string
+    FirstName string
+    LastName  string
+    Email     string
+    Password  *string
 }
 ```
 
@@ -60,35 +58,42 @@ package db
 import "github.com/jackc/pgx/v5/pgtype"
 
 type User struct {
-	ID        string
-	Email     string
-	FirstName string
-	LastName  string
-	Password  pgtype.Text
+    ID        string
+    Email     string
+    FirstName string
+    LastName  string
+    Password  pgtype.Text
 }
-
 ```
 
-#### Minimal configuration
+---
 
-With simple pkl configuration like this
+#### Default mode: types (interface + implementation)
+
+With this minimal configuration, go-mapper-gen generates an unexported interface and implementation with methods to
+convert both ways.
 
 ```pkl
 // file: mapper.pkl
-amends "https://github.com/toniphan21/gmg-lib/releases/download/v0.1.0/Config.pkl"
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/v0.1.0/Config.pkl"
 
 packages {
-	["github.com/toniphan21/go-mapper-gen/basic/db"] {
-		source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
-		structs {
-			["User"] { source_struct_name = "User" }
-		}
-	}
-}
+  ["github.com/toniphan21/go-mapper-gen/basic/db"] { 
+    source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
 
+    structs {
+      ["User"] { source_struct_name = "User" }
+    }
+  }
+}
 ```
 
-the generated code in default `mode = "types"` is
+To generate code:
+
+- Run `go generate ./...`, or
+- Invoke directly: `go run github.com/toniphan21/go-mapper-gen/cmd/generator` (from the module root)
+
+This produces mapping code (by default in the target package) and keeps names unexported to avoid polluting your API surface.
 
 ```go
 // golden-file: db/gen_mapper.go
@@ -149,49 +154,46 @@ func (m *iMapperImpl) FromUser(in User) domain.User {
 var _ iMapper = (*iMapperImpl)(nil)
 ```
 
-the default interface/implementation and constructor name are unexported because `go-mapper-gen` doesn't
-want to pollute your source code. You can use it via composition like this
+Use via composition to keep your API clean:
 
 ```go
-// file: domain/mapper.go
-
+// file: db/mapper.go
 var mapper = new_iMapper()
 
-func test() {
-	// mapper.ToUser(...)
+func demo() {
+    _ = mapper.ToUser(/* ... */)
 }
 
-// or
-
-type Mapper interface {
-	iMapper
-}
-
+// Or expose your own interface that embeds the generated one
+type Mapper interface { iMapper }
 ```
 
-If you want to rename an interface/implementation, use `interface_name = ...`. Please check out `Config.pkl` file to see
-all the options.
+You can customize names (interface, implementation, constructor) in the Pkl config.
+See [Config.pkl](https://github.com/toniphan21/go-mapper-gen/blob/main/pkl/Config.pkl) for all options.
 
-#### Functional style
+---
 
-You can switch to functions mode, `go-mapper-gen` will generate package level functions only.
+#### Functional mode: package-level functions
+
+Switch to functions mode to emit only functions:
 
 ```pkl
 // file: mapper.pkl
-amends "https://github.com/toniphan21/gmg-lib/releases/download/v0.1.0/Config.pkl"
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/v0.1.0/Config.pkl"
 
 packages {
-  	["github.com/toniphan21/go-mapper-gen/basic/db"] { 
-		mode = "functions"
-		source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
-		structs {
-		  	["User"] { source_struct_name = "User" }
-		}
-	}
+  ["github.com/toniphan21/go-mapper-gen/basic/db"] { 
+    mode = "functions"
+    source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
+
+    structs {
+      ["User"] { source_struct_name = "User" }
+    }
+  }
 }
 ```
 
-generated code in `mode = "functions"` is
+This yields functions like `ToUser` and `FromUser` in the target package:
 
 ```go
 // golden-file: db/gen_mapper.go
@@ -238,10 +240,13 @@ func FromUser(in User) domain.User {
 }
 ```
 
+---
+
 ### 🤝 Contributing
 
-PRs are welcome! Please see our Contributing Guide for details on how to run tests and submit high-quality pull
-requests.
+PRs are welcome! See the
+[Contributing Guide](https://github.com/toniphan21/go-mapper-gen/blob/main/CONTRIBUTING.md)
+for how to run tests and submit high-quality pull requests.
 
 ### 📄 License
 
@@ -249,4 +254,4 @@ Distributed under the MIT License.
 
 ### ☕ Support
 
-Like the project? [Buy me a coffee](https://buymeacoffee.com/toniphan21)
+Like the project? [Buy me a coffee](https://buymeacoffee.com/toniphan21). Thank you!
