@@ -9,7 +9,7 @@ import (
 var FS embed.FS
 
 func AmendsPath() string {
-	return "https://github.com/toniphan21/go-mapper-gen/releases/download/v0.1.0/Config.pkl"
+	return "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 }
 
 func LibFilePaths() []string {

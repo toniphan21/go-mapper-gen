@@ -10,8 +10,6 @@ import (
 	"github.com/toniphan21/go-mapper-gen/internal/util"
 )
 
-const defaultConfigFileName = "mapper.pkl"
-
 type VersionCmd struct{}
 
 type GenerateCmd struct {
@@ -44,6 +42,10 @@ func Run(args Args) {
 	level := "info"
 	if args.Verbose {
 		level = "debug"
+	}
+
+	if args.NoColor {
+		util.DisableColor()
 	}
 
 	handler := util.NewSlogHandler(os.Stdout, level)
@@ -86,7 +88,7 @@ func Run(args Args) {
 
 		handleError(runGenerate(GenerateCmd{
 			WorkingDir:     absPath,
-			ConfigFileName: defaultConfigFileName,
+			ConfigFileName: args.Generate.ConfigFileName,
 			DryRun:         args.Generate.DryRun,
 		}, logger))
 
@@ -96,9 +98,8 @@ func Run(args Args) {
 			panic(err)
 		}
 		handleError(runGenerate(GenerateCmd{
-			WorkingDir:     wd,
-			ConfigFileName: defaultConfigFileName,
-			DryRun:         false,
+			WorkingDir: wd,
+			DryRun:     false,
 		}, logger))
 	}
 }

@@ -1,4 +1,4 @@
-amends "https://github.com/toniphan21/go-mapper-gen/releases/download/v0.1.0/Config.pkl"
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
 packages {
   ["github.com/toniphan21/go-mapper-gen/example"] {

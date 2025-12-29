@@ -1,20 +1,28 @@
 ## go-mapper-gen
 
-A type-safe code generator for Go that automates mappings between different struct types (e.g., domain entities ↔︎ DB
-models). It’s powered by [pkl-lang](https://pkl-lang.org) for a modern, schema-driven configuration experience with validation and IDE completion.
+[![Go Report Card](https://goreportcard.com/badge/github.com/toniphan21/go-bf)](https://goreportcard.com/report/github.com/toniphan21/go-bf)
 
-### 💡 Why go-mapper-gen?
+--- 
 
-- Flexible generation modes: emit package-level functions or interface + implementation types.
-- pkl-powered configuration with strong typing and validation.
-- Pluggable converters for complex field transformations (gRPC, pgtype, SQL, numeric, pointers, slices, etc.).
-- Type safety: compile-time analysis of your Go source ensures invalid mappings fail at generation time, not runtime.
+**go-mapper-gen** is a type-safe code generator for Go that automates mappings between different struct types such
+as domain entities ↔︎ database models or API ↔︎ internal representations.
+
+It uses [pkl](https://pkl-lang.org) as a modern, schema-driven configuration language, providing strong validation,
+clear semantics, and IDE auto-completion when defining mappings.
+
+### Highlights
+
+- 🔒 Type-safe code generation with compile-time guarantees.
+- 🧘 Flexible output: functions or interface/implementation pairs.
+- 💪 Strongly typed [pkl](https://pkl-lang.org) configuration schema with IDE support.
+- 🧰 Built-in support for common field types, extensible via custom functions.
+- 🛠️ Can be used as a standalone CLI or embedded as a Go library.
 
 ---
 
-### 🛠 Quickstart
+### Quickstart
 
-Firstly, let set up a project which uses sqlc and pgtype
+Firstly, let set up a project which uses `sqlc` and `pgtype`
 
 ```go.mod
 module github.com/toniphan21/go-mapper-gen/basic
@@ -75,7 +83,7 @@ convert both ways.
 
 ```pkl
 // file: mapper.pkl
-amends "https://github.com/toniphan21/go-mapper-gen/releases/download/v0.1.0/Config.pkl"
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
 packages {
   ["github.com/toniphan21/go-mapper-gen/basic/db"] { 
@@ -179,7 +187,7 @@ Switch to functions mode to emit only functions:
 
 ```pkl
 // file: mapper.pkl
-amends "https://github.com/toniphan21/go-mapper-gen/releases/download/v0.1.0/Config.pkl"
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
 packages {
   ["github.com/toniphan21/go-mapper-gen/basic/db"] { 
@@ -242,16 +250,23 @@ func FromUser(in User) domain.User {
 
 ---
 
-### 🤝 Contributing
+### Next Steps
 
-PRs are welcome! See the
-[Contributing Guide](https://github.com/toniphan21/go-mapper-gen/blob/main/CONTRIBUTING.md)
-for how to run tests and submit high-quality pull requests.
+Take a look at examples of how to:
 
-### 📄 License
+- Config 
+  [multiple structs](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/02-multiple-structs), 
+  [change functions' name](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/03-change-functions-name), 
+  manual field mapping.
+- [Use multiple mappers in a package](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/01-multiple-mappers).
+- Use functions to convert custom type: 
+  [package level functions](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/01-use-package-level-functions),
+  [variable methods](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/02-use-variable-methods).
+- Use go-mapper-gen as a library.
+
+### Contributing & Licence
+
+PRs are welcome! See the [CONTRIBUTING](https://github.com/toniphan21/go-mapper-gen/blob/main/CONTRIBUTING.md).
+❤️ Like the project? [Buy me a coffee](https://buymeacoffee.com/toniphan21) ☕. Thank you!
 
 Distributed under the MIT License.
-
-### ☕ Support
-
-Like the project? [Buy me a coffee](https://buymeacoffee.com/toniphan21). Thank you!
