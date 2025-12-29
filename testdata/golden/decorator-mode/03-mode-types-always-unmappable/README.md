@@ -41,14 +41,14 @@ Decorator is always emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    decorator_mode = "always"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+		decorator_mode = "always"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 

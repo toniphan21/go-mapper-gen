@@ -41,13 +41,13 @@ Because User <-> UserMessage is mappable so decorator will not be emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserMessage" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserMessage" }
+		}
+	}
 }
 ```
 

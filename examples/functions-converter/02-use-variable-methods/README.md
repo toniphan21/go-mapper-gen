@@ -48,19 +48,19 @@ In configuration, we use the same syntax `domain.com/user/pkg-path.VariableName`
 
 ```pkl
 converter {
-  functions {
-    "github.com/toniphan21/go-mapper-gen/fc.ConvertFuncs"
-  }
+	functions {
+		"github.com/toniphan21/go-mapper-gen/fc.ConvertFuncs"
+	}
 }
 
 packages {
-  ["github.com/toniphan21/go-mapper-gen/fc"] {
-    source_pkg = "{CurrentPackage}"
+	["github.com/toniphan21/go-mapper-gen/fc"] {
+		source_pkg = "{CurrentPackage}"
 
-    structs {
-      ["Target"] { source_struct_name = "Source" }
-    }
-  }
+		structs {
+			["Target"] { source_struct_name = "Source" }
+		}
+	}
 }
 ```
 

@@ -41,14 +41,14 @@ Because User <-> UserEntity is not mappable but decorator never emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    decorator_mode = "never"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+		decorator_mode = "never"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 

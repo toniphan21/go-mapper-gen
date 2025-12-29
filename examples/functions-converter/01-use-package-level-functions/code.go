@@ -22,3 +22,4 @@ func MyIDToString(v MyID) string {
 func StringToMyID(v string) MyID {
 	return MyID{ID: v}
 }
+

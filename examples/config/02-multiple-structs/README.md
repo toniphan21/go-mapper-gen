@@ -63,14 +63,14 @@ You can add multiple structs in configuration like this
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/config/rest"] {
-    source_pkg = "github.com/toniphan21/go-mapper-gen/config/domain"
+	["github.com/toniphan21/go-mapper-gen/config/rest"] {
+		source_pkg = "github.com/toniphan21/go-mapper-gen/config/domain"
 
-    structs {
-      ["UserResponse"] { source_struct_name = "User" }
-      ["AddressResponse"] { source_struct_name = "Address" }
-    }
-  }
+		structs {
+			["UserResponse"] { source_struct_name = "User" }
+			["AddressResponse"] { source_struct_name = "Address" }
+		}
+	}
 }
 ```
 

@@ -35,7 +35,7 @@ type UserEntity struct {
 
 #### mode types: emit interface, implementation and constructor
 
-By default, generator use mode `"types"` which emits an interface `iMapper`, 
+By default, generator use mode `"types"` which emits an interface `iMapper`,
 an implementation `iMapperImpl` and the constructor `new_iMapper`. They are unexported
 because `go-mapper-gen` doesn't want to pollute your package. You can compose in
 your public interface like this:
@@ -52,17 +52,17 @@ or simply you can rename the generated interface by using interface_name configu
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/basic"] {
-    interface_name = "Mapper"
-    implementation_name = "mapperImpl"
-    constructor_name = "NewMapper"
-    
-    source_pkg = "{CurrentPackage}"
+	["github.com/toniphan21/go-mapper-gen/basic"] {
+		interface_name = "Mapper"
+		implementation_name = "mapperImpl"
+		constructor_name = "NewMapper"
 
-    structs {
-      ["User"] { source_struct_name = "UserEntity" }
-    }
-  }
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 

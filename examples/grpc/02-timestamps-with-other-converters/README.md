@@ -46,13 +46,13 @@ With minimum configuration:
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/converters/grpc/example"] {
-    source_pkg = "github.com/toniphan21/gmg-lib/gen/go/iam/v1"
+	["github.com/toniphan21/go-mapper-gen/converters/grpc/example"] {
+		source_pkg = "github.com/toniphan21/gmg-lib/gen/go/iam/v1"
 
-    structs {
-      ["User"] { source_struct_name = "User" }
-    }
-  }
+		structs {
+			["User"] { source_struct_name = "User" }
+		}
+	}
 }
 ```
 

@@ -43,13 +43,13 @@ With minimum configuration
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/example"] {
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["Domain"] { source_struct_name = "Database" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/example"] {
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["Domain"] { source_struct_name = "Database" }
+		}
+	}
 }
 ```
 

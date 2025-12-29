@@ -41,15 +41,15 @@ Decorator never emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    mode = "functions"
-    decorator_mode = "never"
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserMessage" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		mode = "functions"
+		decorator_mode = "never"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserMessage" }
+		}
+	}
 }
 ```
 

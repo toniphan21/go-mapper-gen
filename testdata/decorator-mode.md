@@ -40,13 +40,13 @@ Because User <-> UserEntity is not mappable so decorator will be emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 
@@ -125,13 +125,13 @@ Because User <-> UserMessage is mappable so decorator will not be emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserMessage" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserMessage" }
+		}
+	}
 }
 ```
 
@@ -186,14 +186,14 @@ Decorator is always emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    decorator_mode = "always"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+		decorator_mode = "always"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 
@@ -274,14 +274,14 @@ Because User <-> UserEntity is not mappable but decorator never emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    decorator_mode = "never"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+		decorator_mode = "never"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 
@@ -338,14 +338,14 @@ Decorator never emitted.
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    source_pkg = "{CurrentPackage}"
-    decorator_mode = "never"
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		source_pkg = "{CurrentPackage}"
+		decorator_mode = "never"
 
-    structs {
-      ["User"] {source_struct_name = "UserMessage" }
-    }
-  }
+		structs {
+			["User"] { source_struct_name = "UserMessage" }
+		}
+	}
 }
 ```
 
@@ -400,14 +400,14 @@ Because User <-> UserEntity is not mappable so decorator will be emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    mode = "functions"
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		mode = "functions"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 
@@ -458,14 +458,14 @@ Because User <-> UserMessage is mappable so decorator will not be emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    mode = "functions"
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserMessage" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		mode = "functions"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserMessage" }
+		}
+	}
 }
 ```
 
@@ -506,15 +506,15 @@ Decorator always emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    mode = "functions"
-    decorator_mode = "always"
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		mode = "functions"
+		decorator_mode = "always"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 
@@ -565,15 +565,15 @@ Decorator always emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    mode = "functions"
-    decorator_mode = "always"
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserMessage" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		mode = "functions"
+		decorator_mode = "always"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserMessage" }
+		}
+	}
 }
 ```
 
@@ -622,15 +622,15 @@ Because User <-> UserEntity is not mappable but decorator never emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    mode = "functions"
-    decorator_mode = "never"
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		mode = "functions"
+		decorator_mode = "never"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 
@@ -673,15 +673,15 @@ Decorator never emitted
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/decorator"] {
-    mode = "functions"
-    decorator_mode = "never"
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] {source_struct_name = "UserMessage" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/decorator"] {
+		mode = "functions"
+		decorator_mode = "never"
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserMessage" }
+		}
+	}
 }
 ```
 

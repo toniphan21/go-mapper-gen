@@ -36,22 +36,23 @@ type UserEntity struct {
 #### mode functions: emit package level functions
 
 You can change the mode to `"functions"`
+
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/basic"] {
-    mode = "functions"
+	["github.com/toniphan21/go-mapper-gen/basic"] {
+		mode = "functions"
 
-    // simply ignored in mode "functions", can be deleted
-    interface_name = "Mapper"
-    implementation_name = "mapperImpl"
-    constructor_name = "NewMapper"
-    
-    source_pkg = "{CurrentPackage}"
+		// simply ignored in mode "functions", can be deleted
+		interface_name = "Mapper"
+		implementation_name = "mapperImpl"
+		constructor_name = "NewMapper"
 
-    structs {
-      ["User"] { source_struct_name = "UserEntity" }
-    }
-  }
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 

@@ -63,14 +63,14 @@ You can add multiple structs in configuration like this
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/config/rest"] {
-    source_pkg = "github.com/toniphan21/go-mapper-gen/config/domain"
+	["github.com/toniphan21/go-mapper-gen/config/rest"] {
+		source_pkg = "github.com/toniphan21/go-mapper-gen/config/domain"
 
-    structs {
-      ["UserResponse"] { source_struct_name = "User" }
-      ["AddressResponse"] { source_struct_name = "Address" }
-    }
-  }
+		structs {
+			["UserResponse"] { source_struct_name = "User" }
+			["AddressResponse"] { source_struct_name = "Address" }
+		}
+	}
 }
 ```
 
@@ -161,34 +161,34 @@ var _ iMapper = (*iMapperImpl)(nil)
 ### Change functions name
 
 By default, the function converts source to target name is `To{TargetStructName}`,
-function convert source from target is `From{TargetStructName}`, we can customize them 
+function convert source from target is `From{TargetStructName}`, we can customize them
 on 2 levels: package and individual struct.
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/config/rest"] {
-    source_pkg = "github.com/toniphan21/go-mapper-gen/config/domain"
+	["github.com/toniphan21/go-mapper-gen/config/rest"] {
+		source_pkg = "github.com/toniphan21/go-mapper-gen/config/domain"
 
-    // these configs are package levels, applied to all structs
-    source_to_target_function_name = "Make{TargetStructName}"
-    source_from_target_function_name = "To{SourceStructName}"
+		// these configs are package level, applied to all structs
+		source_to_target_function_name = "Make{TargetStructName}"
+		source_from_target_function_name = "To{SourceStructName}"
 
-    structs {
-      ["UserResponse"] {
-        source_struct_name = "User"
+		structs {
+			["UserResponse"] {
+				source_struct_name = "User"
 
-        // this config is per struct level, it overrides the package's level value
-        source_from_target_function_name = "ConvertTo{SourceStructName}"
-      }
+				// this config is per struct level, it overrides the package's level value
+				source_from_target_function_name = "ConvertTo{SourceStructName}"
+			}
 
-      ["AddressResponse"] {
-        source_struct_name = "Address"
+			["AddressResponse"] {
+				source_struct_name = "Address"
 
-        // this config is per struct level, it overrides the package's level value
-        source_to_target_function_name = "Create{TargetStructName}"
-      }
-    }
-  }
+				// this config is per struct level, it overrides the package's level value
+				source_to_target_function_name = "Create{TargetStructName}"
+			}
+		}
+	}
 }
 ```
 

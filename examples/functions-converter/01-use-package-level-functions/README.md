@@ -38,26 +38,27 @@ func MyIDToString(v MyID) string {
 func StringToMyID(v string) MyID {
 	return MyID{ID: v}
 }
+
 ```
 
 In configuration, we need to register convert functions using syntax `domain.com/user/pkg-path.FunctionName`
 
 ```pkl
 converter {
-  functions {
-    "github.com/toniphan21/go-mapper-gen/fc.MyIDToString"
-    "github.com/toniphan21/go-mapper-gen/fc.StringToMyID"
-  }
+	functions {
+		"github.com/toniphan21/go-mapper-gen/fc.MyIDToString"
+		"github.com/toniphan21/go-mapper-gen/fc.StringToMyID"
+	}
 }
 
 packages {
-  ["github.com/toniphan21/go-mapper-gen/fc"] {
-    source_pkg = "{CurrentPackage}"
+	["github.com/toniphan21/go-mapper-gen/fc"] {
+		source_pkg = "{CurrentPackage}"
 
-    structs {
-      ["Target"] { source_struct_name = "Source" }
-    }
-  }
+		structs {
+			["Target"] { source_struct_name = "Source" }
+		}
+	}
 }
 ```
 

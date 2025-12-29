@@ -34,6 +34,7 @@ type UserEntity struct {
 	Name  string
 	Email string
 }
+
 ```
 
 Using `priorities { [0] {...} [1] {...} }` allows configuring multiple mappers

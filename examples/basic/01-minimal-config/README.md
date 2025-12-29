@@ -40,13 +40,13 @@ config to generate a mapper from `User` to `UserEntity` struct:
 
 ```pkl
 packages {
-  ["github.com/toniphan21/go-mapper-gen/basic"] {
-    source_pkg = "{CurrentPackage}"
-    
-    structs {
-      ["User"] { source_struct_name = "UserEntity" }
-    }
-  }
+	["github.com/toniphan21/go-mapper-gen/basic"] {
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
 ```
 

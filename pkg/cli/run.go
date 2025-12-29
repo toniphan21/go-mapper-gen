@@ -24,6 +24,7 @@ type RunCommand struct {
 	Parser                    gen.Parser
 	FileManager               gen.FileManager
 	Logger                    *slog.Logger
+	RegisterConverters        func()
 }
 
 func Run(cmd RunCommand) error {
@@ -69,12 +70,14 @@ func Run(cmd RunCommand) error {
 	gen.ClearAllRegisteredConverters()
 	gen.RegisterBuiltinConverters(parsedConfig.BuiltInConverters)
 	loadLibraryConverters(parsedConfig.LibraryConverters)
+	if cmd.RegisterConverters != nil {
+		cmd.RegisterConverters()
+	}
 
 	generator := gen.New(parser, *parsedConfig, gen.WithLogger(logger), gen.WithFileManager(fm))
 
-	logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
-
 	if cmd.PrintRegisteredConverters {
+		logger.Info(util.ColorGreen(appName) + " is running with registered field converters:")
 		gen.PrintRegisteredConverters(logger)
 	}
 
@@ -96,21 +99,25 @@ func Run(cmd RunCommand) error {
 	}
 
 	outs := fm.JenFiles()
-	if cmd.DryRun {
-		logger.Info(util.ColorGreen(appName) + " is printing generated file content")
-		for p, out := range outs {
-			rp := filepath.Join(cmd.WorkingDir, p)
-			logger.Info(util.ColorGreen(appName) + " will save to file " + util.ColorBlue(rp))
-			util.PrintFileWithFunction(p, []byte(out.GoString()), func(l string) {
-				logger.Info(l)
-			})
-		}
+	if len(outs) == 0 {
+		logger.Info(util.ColorGreen(appName) + " generated nothing")
 	} else {
-		logger.Info(util.ColorGreen(appName) + " is saving generated file to disk")
-		for p, out := range outs {
-			rp := filepath.Join(cmd.WorkingDir, p)
-			_ = os.WriteFile(rp, []byte(out.GoString()), 0644)
-			logger.Info(util.ColorGreen(appName) + " saved to file " + util.ColorBlue(rp))
+		if cmd.DryRun {
+			logger.Info(util.ColorGreen(appName) + " is printing generated file content")
+			for p, out := range outs {
+				rp := filepath.Join(cmd.WorkingDir, p)
+				logger.Info(util.ColorGreen(appName) + " will save to file " + util.ColorBlue(rp))
+				util.PrintFileWithFunction(p, []byte(out.GoString()), func(l string) {
+					logger.Info(l)
+				})
+			}
+		} else {
+			logger.Info(util.ColorGreen(appName) + " is saving generated file to disk")
+			for p, out := range outs {
+				rp := filepath.Join(cmd.WorkingDir, p)
+				_ = os.WriteFile(rp, []byte(out.GoString()), 0644)
+				logger.Info(util.ColorGreen(appName) + " saved to file " + util.ColorBlue(rp))
+			}
 		}
 	}
 

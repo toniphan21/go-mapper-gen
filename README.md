@@ -39,7 +39,7 @@ github.com/jackc/pgx/v5 v5.7.6 h1:rWQc5FwZSPX58r1OQmkuaNicxdmExaEz5A2DO2hUuTk=
 github.com/jackc/pgx/v5 v5.7.6/go.mod h1:aruU7o91Tc2q2cFp5h4uP3f6ztExVpyVv88Xl/8Vl8M=
 ```
 
-Given that you have an entity located in your `/domain`:
+Given that you have an entity located in your `domain` package:
 
 ```go
 // file: domain/entity.go
@@ -56,7 +56,7 @@ type User struct {
 }
 ```
 
-and another struct perhaps generated from your database using tool such as [sqlc](https://sqlc.dev)
+and another struct perhaps generated from your database using tool such as [sqlc](https://sqlc.dev) located in `db`
 
 ```go
 // file: db/models.go
@@ -78,7 +78,7 @@ type User struct {
 
 #### Default mode: types (interface + implementation)
 
-With this minimal configuration, go-mapper-gen generates an unexported interface and implementation with methods to
+With this minimal configuration, `go-mapper-gen` generates an unexported interface and implementation with methods to
 convert both ways.
 
 ```pkl
@@ -86,13 +86,13 @@ convert both ways.
 amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
 packages {
-  ["github.com/toniphan21/go-mapper-gen/basic/db"] { 
-    source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
+	["github.com/toniphan21/go-mapper-gen/basic/db"] {
+		source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
 
-    structs {
-      ["User"] { source_struct_name = "User" }
-    }
-  }
+		structs {
+			["User"] { source_struct_name = "User" }
+		}
+	}
 }
 ```
 
@@ -190,14 +190,14 @@ Switch to functions mode to emit only functions:
 amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
 packages {
-  ["github.com/toniphan21/go-mapper-gen/basic/db"] { 
-    mode = "functions"
-    source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
+	["github.com/toniphan21/go-mapper-gen/basic/db"] {
+		mode = "functions"
+		source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
 
-    structs {
-      ["User"] { source_struct_name = "User" }
-    }
-  }
+		structs {
+			["User"] { source_struct_name = "User" }
+		}
+	}
 }
 ```
 
@@ -260,13 +260,15 @@ Take a look at examples of how to:
   manual field mapping.
 - [Use multiple mappers in a package](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/01-multiple-mappers).
 - Use functions to convert custom type: 
-  [package level functions](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/01-use-package-level-functions),
-  [variable methods](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/02-use-variable-methods).
+  [use package level functions](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/01-use-package-level-functions),
+  [use variable methods](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/02-use-variable-methods).
 - Use go-mapper-gen as a library.
+
+---
 
 ### Contributing & Licence
 
 PRs are welcome! See the [CONTRIBUTING](https://github.com/toniphan21/go-mapper-gen/blob/main/CONTRIBUTING.md).
-❤️ Like the project? [Buy me a coffee](https://buymeacoffee.com/toniphan21) ☕. Thank you!
-
 Distributed under the MIT License.
+
+❤️ Like the project? [Buy me a coffee](https://buymeacoffee.com/toniphan21) ☕. Thank you!

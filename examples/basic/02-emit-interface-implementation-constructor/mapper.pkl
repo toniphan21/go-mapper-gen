@@ -1,15 +1,15 @@
 amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
 packages {
-  ["github.com/toniphan21/go-mapper-gen/basic"] {
-    interface_name = "Mapper"
-    implementation_name = "mapperImpl"
-    constructor_name = "NewMapper"
-    
-    source_pkg = "{CurrentPackage}"
+	["github.com/toniphan21/go-mapper-gen/basic"] {
+		interface_name = "Mapper"
+		implementation_name = "mapperImpl"
+		constructor_name = "NewMapper"
 
-    structs {
-      ["User"] { source_struct_name = "UserEntity" }
-    }
-  }
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["User"] { source_struct_name = "UserEntity" }
+		}
+	}
 }
