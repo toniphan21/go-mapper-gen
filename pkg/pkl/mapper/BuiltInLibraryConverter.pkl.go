@@ -1,5 +1,5 @@
-// Code generated from Pkl module `gomappergen.Config`. DO NOT EDIT.
-package config
+// Code generated from Pkl module `gomappergen.mapper`. DO NOT EDIT.
+package mapper
 
 type BuiltInLibraryConverter struct {
 	EnableGrpc bool `pkl:"enable_grpc"`

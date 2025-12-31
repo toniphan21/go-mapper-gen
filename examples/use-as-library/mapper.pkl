@@ -1,0 +1,11 @@
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
+
+packages {
+  ["github.com/toniphan21/awesome"] {
+    source_pkg = "{CurrentPackage}"
+
+    structs {
+      ["Target"] { source_struct_name = "Source" }
+    }
+  }
+}

@@ -1,15 +1,17 @@
-//go:generate rm -rf internal/config
+//go:generate rm -rf pkg/pkl
 //go:generate pkl-gen-go pkl/Config.pkl
 package gomappergen
 
 import (
 	"context"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
-	"github.com/apple/pkl-go/pkl"
-	"github.com/toniphan21/go-mapper-gen/internal/config"
+	"github.com/toniphan21/go-mapper-gen/pkg/pkl"
+	"github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper"
 )
 
 type Config struct {
@@ -190,16 +192,14 @@ func ParseConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
-	evaluator, err := pkl.NewEvaluator(context.Background(), pkl.PreconfiguredOptions)
+	cfg, err := pkl.LoadFromPath(context.Background(), path)
 	if err != nil {
 		return nil, err
 	}
+	return MakeConfig(cfg)
+}
 
-	cfg, err := config.Load(context.Background(), evaluator, pkl.FileSource(path))
-	if err != nil {
-		return nil, err
-	}
-
+func MakeConfig(cfg pkl.Config) (*Config, error) {
 	m := &configMapper{}
 	pkgConfigs, err := m.mapPackagesConfig(cfg.Packages, cfg.All)
 	if err != nil {
@@ -217,7 +217,7 @@ func ParseConfig(path string) (*Config, error) {
 
 type configMapper struct{}
 
-func (m *configMapper) mapBuiltInConverterConfig(in config.BuiltInConverter) BuiltInConverterConfig {
+func (m *configMapper) mapBuiltInConverterConfig(in mapper.BuiltInConverter) BuiltInConverterConfig {
 	return BuiltInConverterConfig{
 		UseIdentical:     in.EnableIdentical,
 		UseSlice:         in.EnableSlice,
@@ -228,7 +228,7 @@ func (m *configMapper) mapBuiltInConverterConfig(in config.BuiltInConverter) Bui
 	}
 }
 
-func (m *configMapper) mapLibraryConverterConfig(in config.BuiltInConverter) LibraryConverterConfig {
+func (m *configMapper) mapLibraryConverterConfig(in mapper.BuiltInConverter) LibraryConverterConfig {
 	return LibraryConverterConfig{
 		UseGRPC:   in.Library.EnableGrpc,
 		UsePGType: in.Library.EnablePgtype,
@@ -248,7 +248,7 @@ func (m *configMapper) mapConverterFunctions(list *[]string) []ConvertFunctionCo
 	return result
 }
 
-func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all config.Base) (map[string][]PackageConfig, error) {
+func (m *configMapper) mapPackagesConfig(packages map[string]pkl.Package, all pkl.All) (map[string][]PackageConfig, error) {
 	var result = make(map[string][]PackageConfig)
 	if packages == nil {
 		return result, nil
@@ -256,9 +256,9 @@ func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all 
 
 	var pkgCfs []PackageConfig
 
-	for path, mapper := range packages {
-		if mapper.GetPriorities() != nil {
-			priorities := *mapper.GetPriorities()
+	for path, pkg := range packages {
+		if pkg.GetPriorities() != nil {
+			priorities := pkg.GetPriorities()
 			var priorityKeys []int
 			for i := range priorities {
 				priorityKeys = append(priorityKeys, i)
@@ -266,7 +266,7 @@ func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all 
 			sort.Ints(priorityKeys)
 
 			for _, i := range priorityKeys {
-				ci, ok := priorities[i].(config.BaseMapper)
+				ci, ok := priorities[i].(pkl.Package)
 				if !ok {
 					continue
 				}
@@ -278,7 +278,7 @@ func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all 
 			}
 		}
 
-		defaultCf := m.mapMapper(mapper, all)
+		defaultCf := m.mapMapper(pkg, all)
 		if defaultCf == nil {
 			continue
 		}
@@ -288,13 +288,13 @@ func (m *configMapper) mapPackagesConfig(packages map[string]config.Mapper, all 
 	return result, nil
 }
 
-func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *PackageConfig {
+func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 	if len(cf.GetStructs()) == 0 {
 		return nil
 	}
 
 	pkgCf := PackageConfig{
-		Output:                 m.mergeOutput(all.GetOutput(), cf.GetOutput()),
+		Output:                 m.mergeOutput(&all.Output, cf.GetOutput()),
 		Mode:                   m.mapMode(cf.GetMode()),
 		InterfaceName:          cf.GetInterfaceName(),
 		ImplementationName:     cf.GetImplementationName(),
@@ -306,7 +306,12 @@ func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Package
 	}
 
 	var structs []StructConfig
-	for mapperName, v := range cf.GetStructs() {
+	mapperMap := cf.GetStructs()
+	mapperNames := slices.Collect(maps.Keys(mapperMap))
+	sort.Strings(mapperNames)
+
+	for _, mapperName := range mapperNames {
+		v := mapperMap[mapperName]
 		targetStructName := mapperName
 		if v.TargetStructName != nil {
 			targetStructName = *v.TargetStructName
@@ -323,8 +328,8 @@ func (m *configMapper) mapMapper(cf config.BaseMapper, all config.Base) *Package
 			Pointer:                  m.mapPointer(v.Pointer),
 			Fields:                   m.mapFieldConfig(v.Fields),
 			UseGetter:                mergeConfigValue(v.UseGetterIfAvailable, cf.GetUseGetterIfAvailable()),
-			GenerateSourceToTarget:   v.GenerateSourceToTarget,
-			GenerateSourceFromTarget: v.GenerateSourceFromTarget,
+			GenerateSourceToTarget:   mergeConfigValue(v.GenerateSourceToTarget, cf.GetGenerateSourceToTarget()),
+			GenerateSourceFromTarget: mergeConfigValue(v.GenerateSourceFromTarget, cf.GetGenerateSourceFromTarget()),
 		}
 
 		structs = append(structs, structCf)
@@ -384,7 +389,7 @@ func (m *configMapper) mapNameMatch(val string) NameMatch {
 	}
 }
 
-func (m *configMapper) mergeOutput(outputs ...*config.Output) Output {
+func (m *configMapper) mergeOutput(outputs ...*pkl.Output) Output {
 	output := &Output{}
 	for _, o := range outputs {
 		if o == nil {
@@ -406,7 +411,7 @@ func (m *configMapper) mergeOutput(outputs ...*config.Output) Output {
 	return *output
 }
 
-func (m *configMapper) mapFieldConfig(in config.Fields) FieldConfig {
+func (m *configMapper) mapFieldConfig(in mapper.Fields) FieldConfig {
 	var manualMap map[string]string
 	if in.Map != nil {
 		manualMap = make(map[string]string)

@@ -186,5 +186,3 @@ func (m *iMapperImpl) FromTarget(in Target) Source {
 
 var _ iMapper = (*iMapperImpl)(nil)
 ```
-
-[//]: # (EmitCode:examples/use-as-library)

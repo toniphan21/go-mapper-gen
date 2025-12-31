@@ -19,7 +19,9 @@ func TestGolden(t *testing.T) {
 	}{
 		{file: "features/basic.md"},
 		{file: "features/config-multiple-mappers.md"},
+		{file: "features/config-multiple-structs.md"},
 		{file: "features/functions-converter.md"},
+		{file: "features/use-as-library.md"},
 
 		{file: "testdata/converter-numeric.md"},
 		{file: "testdata/import.md"},

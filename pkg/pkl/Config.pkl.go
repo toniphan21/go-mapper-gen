@@ -1,18 +1,19 @@
 // Code generated from Pkl module `gomappergen.Config`. DO NOT EDIT.
-package config
+package pkl
 
 import (
 	"context"
 
 	"github.com/apple/pkl-go/pkl"
+	"github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper"
 )
 
 type Config struct {
-	All Base `pkl:"all"`
+	All All `pkl:"all"`
 
-	Converter Converter `pkl:"converter"`
+	Converter mapper.Converter `pkl:"converter"`
 
-	Packages map[string]Mapper `pkl:"packages"`
+	Packages map[string]Package `pkl:"packages"`
 }
 
 // LoadFromPath loads the pkl module at the given path and evaluates it into a Config

@@ -1,9 +1,7 @@
-// Code generated from Pkl module `gomappergen.Config`. DO NOT EDIT.
-package config
+// Code generated from Pkl module `gomappergen.mapper`. DO NOT EDIT.
+package mapper
 
-type BaseMapper interface {
-	Base
-
+type Package interface {
 	GetMode() string
 
 	GetInterfaceName() string
@@ -28,22 +26,24 @@ type BaseMapper interface {
 
 	GetSourcePkg() string
 
-	GetStructs() map[string]MapperStruct
+	GetStructs() map[string]Struct
 
 	GetUseGetterIfAvailable() bool
+
+	GetGenerateSourceToTarget() bool
+
+	GetGenerateSourceFromTarget() bool
 
 	GetGenerateGoDoc() bool
 }
 
-var _ BaseMapper = BaseMapperImpl{}
+var _ Package = PackageImpl{}
 
 // Base configuration for mapper code generation.
 //
 // This configuration controls *how* mappers are generated (types vs functions),
 // naming conventions of generated symbols, decorator behavior, and package layout.
-type BaseMapperImpl struct {
-	BaseImpl
-
+type PackageImpl struct {
 	// Controls the overall generation strategy.
 	//
 	// - "types": Generates an interface, implementation struct, and constructor.
@@ -116,13 +116,25 @@ type BaseMapperImpl struct {
 	// Mapping definitions for this package.
 	//
 	// Each entry describes how a source struct maps to a target struct.
-	Structs map[string]MapperStruct `pkl:"structs"`
+	Structs map[string]Struct `pkl:"structs"`
 
 	// Whether to prefer getter methods over direct field access
 	// on source structs by default.
 	//
 	// Can be overridden per struct.
 	UseGetterIfAvailable bool `pkl:"use_getter_if_available"`
+
+	// Whether to generate source-to-target mapping code.
+	// When false, only target-to-source mapping is generated.
+	//
+	// Can be overridden per struct.
+	GenerateSourceToTarget bool `pkl:"generate_source_to_target"`
+
+	// Whether to generate target-to-source mapping code.
+	// When false, only source-to-target mapping is generated.
+	//
+	// Can be overridden per struct.
+	GenerateSourceFromTarget bool `pkl:"generate_source_from_target"`
 
 	// Whether to generate GoDoc comments for generated code.
 	GenerateGoDoc bool `pkl:"generate_go_doc"`
@@ -134,7 +146,7 @@ type BaseMapperImpl struct {
 // - "functions": Generates package-level mapping functions only (no interface or struct).
 //
 // Note: When mode = "functions", type-related naming options are ignored.
-func (rcv BaseMapperImpl) GetMode() string {
+func (rcv PackageImpl) GetMode() string {
 	return rcv.Mode
 }
 
@@ -142,21 +154,21 @@ func (rcv BaseMapperImpl) GetMode() string {
 //
 // Used only when mode = "types".
 // Defaults to a non-exported name to avoid polluting consumer APIs.
-func (rcv BaseMapperImpl) GetInterfaceName() string {
+func (rcv PackageImpl) GetInterfaceName() string {
 	return rcv.InterfaceName
 }
 
 // Name of the generated mapper implementation struct.
 //
 // Used only when mode = "types".
-func (rcv BaseMapperImpl) GetImplementationName() string {
+func (rcv PackageImpl) GetImplementationName() string {
 	return rcv.ImplementationName
 }
 
 // Name of the constructor function for the mapper implementation.
 //
 // Used only when mode = "types".
-func (rcv BaseMapperImpl) GetConstructorName() string {
+func (rcv PackageImpl) GetConstructorName() string {
 	return rcv.ConstructorName
 }
 
@@ -164,7 +176,7 @@ func (rcv BaseMapperImpl) GetConstructorName() string {
 // `{TargetStructName}` will be replaced with the actual target struct name.
 //
 // Can be overridden per struct.
-func (rcv BaseMapperImpl) GetSourceToTargetFunctionName() string {
+func (rcv PackageImpl) GetSourceToTargetFunctionName() string {
 	return rcv.SourceToTargetFunctionName
 }
 
@@ -172,7 +184,7 @@ func (rcv BaseMapperImpl) GetSourceToTargetFunctionName() string {
 // `{TargetStructName}` will be replaced with the actual target struct name.
 //
 // Can be overridden per struct.
-func (rcv BaseMapperImpl) GetSourceFromTargetFunctionName() string {
+func (rcv PackageImpl) GetSourceFromTargetFunctionName() string {
 	return rcv.SourceFromTargetFunctionName
 }
 
@@ -181,14 +193,14 @@ func (rcv BaseMapperImpl) GetSourceFromTargetFunctionName() string {
 // - "adaptive": Generate decorators only when customization hooks are needed.
 // - "always": Always generate decorator types.
 // - "never": Never generate decorators.
-func (rcv BaseMapperImpl) GetDecoratorMode() string {
+func (rcv PackageImpl) GetDecoratorMode() string {
 	return rcv.DecoratorMode
 }
 
 // Name of the generated decorator interface.
 //
 // Used only when decorator_mode != "never"
-func (rcv BaseMapperImpl) GetDecoratorInterfaceName() string {
+func (rcv PackageImpl) GetDecoratorInterfaceName() string {
 	return rcv.DecoratorInterfaceName
 }
 
@@ -196,35 +208,35 @@ func (rcv BaseMapperImpl) GetDecoratorInterfaceName() string {
 // would skip the NoOp implementation.
 //
 // Used only when decorator_mode != "never"
-func (rcv BaseMapperImpl) GetDecoratorNoopName() string {
+func (rcv PackageImpl) GetDecoratorNoopName() string {
 	return rcv.DecoratorNoopName
 }
 
 // Template for the decorator function name.
 //
 // `{FunctionName}` will be replaced with the decorated function name.
-func (rcv BaseMapperImpl) GetDecorateFunctionName() string {
+func (rcv PackageImpl) GetDecorateFunctionName() string {
 	return rcv.DecorateFunctionName
 }
 
 // Default target package for generated mapper code.
 //
 // Defaults to the current package where generation is invoked.
-func (rcv BaseMapperImpl) GetTargetPkg() string {
+func (rcv PackageImpl) GetTargetPkg() string {
 	return rcv.TargetPkg
 }
 
 // Default source package containing input structs.
 //
 // Can be overridden per struct.
-func (rcv BaseMapperImpl) GetSourcePkg() string {
+func (rcv PackageImpl) GetSourcePkg() string {
 	return rcv.SourcePkg
 }
 
 // Mapping definitions for this package.
 //
 // Each entry describes how a source struct maps to a target struct.
-func (rcv BaseMapperImpl) GetStructs() map[string]MapperStruct {
+func (rcv PackageImpl) GetStructs() map[string]Struct {
 	return rcv.Structs
 }
 
@@ -232,11 +244,27 @@ func (rcv BaseMapperImpl) GetStructs() map[string]MapperStruct {
 // on source structs by default.
 //
 // Can be overridden per struct.
-func (rcv BaseMapperImpl) GetUseGetterIfAvailable() bool {
+func (rcv PackageImpl) GetUseGetterIfAvailable() bool {
 	return rcv.UseGetterIfAvailable
 }
 
+// Whether to generate source-to-target mapping code.
+// When false, only target-to-source mapping is generated.
+//
+// Can be overridden per struct.
+func (rcv PackageImpl) GetGenerateSourceToTarget() bool {
+	return rcv.GenerateSourceToTarget
+}
+
+// Whether to generate target-to-source mapping code.
+// When false, only source-to-target mapping is generated.
+//
+// Can be overridden per struct.
+func (rcv PackageImpl) GetGenerateSourceFromTarget() bool {
+	return rcv.GenerateSourceFromTarget
+}
+
 // Whether to generate GoDoc comments for generated code.
-func (rcv BaseMapperImpl) GetGenerateGoDoc() bool {
+func (rcv PackageImpl) GetGenerateGoDoc() bool {
 	return rcv.GenerateGoDoc
 }

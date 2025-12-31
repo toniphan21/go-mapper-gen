@@ -1,5 +1,5 @@
-// Code generated from Pkl module `gomappergen.Config`. DO NOT EDIT.
-package config
+// Code generated from Pkl module `gomappergen.mapper`. DO NOT EDIT.
+package mapper
 
 // Configuration for mapping between a specific source struct
 // and a specific target struct.
@@ -7,7 +7,7 @@ package config
 // Values defined here override corresponding values in `BaseMapper`
 // when explicitly set. Unset (null) values fall back to the base
 // configuration defaults.
-type MapperStruct struct {
+type Struct struct {
 	// Target package for the generated mapping code.
 	//
 	// Overrides package level target_pkg when set.
@@ -64,12 +64,14 @@ type MapperStruct struct {
 	UseGetterIfAvailable *bool `pkl:"use_getter_if_available"`
 
 	// Whether to generate source-to-target mapping code.
-	//
 	// When false, only target-to-source mapping is generated.
-	GenerateSourceToTarget bool `pkl:"generate_source_to_target"`
+	//
+	// Overrides package level generate_source_to_target when set.
+	GenerateSourceToTarget *bool `pkl:"generate_source_to_target"`
 
 	// Whether to generate target-to-source mapping code.
-	//
 	// When false, only source-to-target mapping is generated.
-	GenerateSourceFromTarget bool `pkl:"generate_source_from_target"`
+	//
+	// Overrides package level generate_source_from_target when set.
+	GenerateSourceFromTarget *bool `pkl:"generate_source_from_target"`
 }

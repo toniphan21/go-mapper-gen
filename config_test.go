@@ -244,7 +244,7 @@ func TestParseConfig(t *testing.T) {
 		},
 
 		{
-			name: "(flaky because of slice order) override source_pkg in struct",
+			name: "override source_pkg in struct",
 			config: []string{
 				`packages {`,
 				`	["github.com/example/repo"] {`,
@@ -262,13 +262,13 @@ func TestParseConfig(t *testing.T) {
 			expected: map[string][]PackageConfig{
 				"github.com/example/repo": {
 					buildConfig(nil, expectedStruct{
-						TargetStructName: "Target",
-						SourceStructName: "Source",
-						SourcePkgPath:    "{CurrentPackage}/source",
-					}, expectedStruct{
 						TargetStructName: "OverrideSourcePkg",
 						SourceStructName: "Source",
 						SourcePkgPath:    "{CurrentPackage}/another-source",
+					}, expectedStruct{
+						TargetStructName: "Target",
+						SourceStructName: "Source",
+						SourcePkgPath:    "{CurrentPackage}/source",
 					}),
 				},
 			},

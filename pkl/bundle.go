@@ -14,6 +14,7 @@ func AmendsPath() string {
 
 func LibFilePaths() []string {
 	return []string{
+		"mapper.pkl",
 		"Config.pkl",
 	}
 }

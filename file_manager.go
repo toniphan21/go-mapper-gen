@@ -10,7 +10,7 @@ import (
 
 const BinaryName = "github.com/toniphan21/go-mapper-gen"
 
-var version = "v0.2.0"
+var version = "v0.4.0"
 
 func UseTestVersion() {
 	version = "test"
