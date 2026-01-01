@@ -206,7 +206,7 @@ func (d *dummyConverter) CanConvert(ctx LookupContext, targetType, sourceType ty
 	return true
 }
 
-func (d *dummyConverter) ConvertField(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code {
+func (d *dummyConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
 	return nil
 }
 

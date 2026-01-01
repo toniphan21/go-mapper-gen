@@ -27,8 +27,8 @@ func (c *identicalTypeConverter) CanConvert(ctx LookupContext, targetType, sourc
 	return TypeUtil.IsIdentical(targetType, sourceType)
 }
 
-func (c *identicalTypeConverter) ConvertField(ctx ConverterContext, target, source Symbol, opt ConverterOption) jen.Code {
-	return ctx.Run(c, opt, func() jen.Code {
+func (c *identicalTypeConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return ctx.Run(c, func() jen.Code {
 		return target.Expr().Op("=").Add(source.Expr())
 	})
 }
@@ -56,8 +56,8 @@ func (c *typeToPointerConverter) CanConvert(ctx LookupContext, targetType, sourc
 	return TypeUtil.IsPointerOfType(targetType, sourceType) && !TypeUtil.IsInterface(sourceType)
 }
 
-func (c *typeToPointerConverter) ConvertField(ctx ConverterContext, target, source Symbol, opt ConverterOption) jen.Code {
-	return ctx.Run(c, opt, func() jen.Code {
+func (c *typeToPointerConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return ctx.Run(c, func() jen.Code {
 		return target.Expr().Op("=").Op("&").Add(source.Expr())
 	})
 }
@@ -85,8 +85,8 @@ func (c *pointerToTypeConverter) CanConvert(ctx LookupContext, targetType, sourc
 	return TypeUtil.IsPointerOfType(sourceType, targetType) && !TypeUtil.IsInterface(targetType)
 }
 
-func (c *pointerToTypeConverter) ConvertField(ctx ConverterContext, target, source Symbol, opt ConverterOption) jen.Code {
-	return ctx.Run(c, opt, func() jen.Code {
+func (c *pointerToTypeConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return ctx.Run(c, func() jen.Code {
 		code := jen.If(source.Expr().Op("!=").Nil()).
 			BlockFunc(func(g *jen.Group) {
 				gc := g.Add(target.Expr())
@@ -146,8 +146,8 @@ func (c *sliceConverter) CanConvert(ctx LookupContext, targetType, sourceType ty
 	return ok
 }
 
-func (c *sliceConverter) ConvertField(ctx ConverterContext, target, source Symbol, opt ConverterOption) jen.Code {
-	return ctx.Run(c, opt, func() jen.Code {
+func (c *sliceConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return ctx.Run(c, func() jen.Code {
 		other, ts, ss, ok := c.findTypeConverter(ctx, target.Type, source.Type)
 		if !ok {
 			return nil
@@ -156,7 +156,7 @@ func (c *sliceConverter) ConvertField(ctx ConverterContext, target, source Symbo
 		targetSymbol := target.ToIndexedSymbol("i")
 		targetSymbol.Type = ts
 		sourceSymbol := Symbol{VarName: "v", Type: ss}
-		convertCode := other.ConvertField(ctx, targetSymbol, sourceSymbol, opt)
+		convertCode := other.ConvertField(ctx, targetSymbol, sourceSymbol)
 		if convertCode == nil {
 			return nil
 		}

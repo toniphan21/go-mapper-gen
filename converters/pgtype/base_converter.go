@@ -52,13 +52,13 @@ func (b *baseConverter[T, V]) CanConvert(ctx gen.LookupContext, targetType, sour
 	return b.orchestrator.CanConvert(b, ctx, targetType, sourceType)
 }
 
-func (b *baseConverter[T, V]) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
-	return ctx.Run(b, opts, func() jen.Code {
-		return b.orchestrator.PerformConvert(b, ctx, target, source, opts)
+func (b *baseConverter[T, V]) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
+	return ctx.Run(b, func() jen.Code {
+		return b.orchestrator.PerformConvert(b, ctx, target, source)
 	})
 }
 
-func (b *baseConverter[T, V]) pgtypeToTarget(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+func (b *baseConverter[T, V]) pgtypeToTarget(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
 	/** generated code:
 	if {source}.[[ValidPropertyName]] {
 		{target} = &{source}.[[ValuePropertyName]]
@@ -74,7 +74,7 @@ func (b *baseConverter[T, V]) pgtypeToTarget(ctx gen.ConverterContext, target, s
 	})
 }
 
-func (b *baseConverter[T, V]) pgtypeToTargetToOther(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter, opts gen.ConverterOption) jen.Code {
+func (b *baseConverter[T, V]) pgtypeToTargetToOther(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter) jen.Code {
 	/** generated code:
 	var v0 [[Target]]
 	if {source}.[[ValidPropertyName]] {
@@ -98,14 +98,14 @@ func (b *baseConverter[T, V]) pgtypeToTargetToOther(ctx gen.ConverterContext, ta
 
 	// then call other converter to convert the variable to target
 	sourceSymbol := gen.Symbol{VarName: varName, Type: b.targetedType}
-	convertedCode := oc.ConvertField(ctx, target, sourceSymbol, opts)
+	convertedCode := oc.ConvertField(ctx, target, sourceSymbol)
 	if convertedCode == nil {
 		return nil
 	}
 	return code.Add(convertedCode).Line()
 }
 
-func (b *baseConverter[T, V]) targetToPgType(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+func (b *baseConverter[T, V]) targetToPgType(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
 	/** generated code:
 	if {source} != nil {
 		{target} = pgtype.[[pgtypeName]]{[[ValuePropertyName]]: *{source}, [[ValidPropertyName]]: true}
@@ -129,7 +129,7 @@ func (b *baseConverter[T, V]) targetToPgType(ctx gen.ConverterContext, target, s
 	return code
 }
 
-func (b *baseConverter[T, V]) otherToTargetToPGType(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter, opts gen.ConverterOption) jen.Code {
+func (b *baseConverter[T, V]) otherToTargetToPGType(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter) jen.Code {
 	/** generated code:
 	var v0 [[Target]]
 	// other converter converts source to v0
@@ -147,7 +147,7 @@ func (b *baseConverter[T, V]) otherToTargetToPGType(ctx gen.ConverterContext, ta
 	varName := ctx.NextVarName()
 	code := jen.Line().Var().Id(varName).Add(gen.GeneratorUtil.TypeToJenCode(b.targetedType)).Line()
 	targetSymbol := gen.Symbol{VarName: varName, Type: b.targetedType, Metadata: gen.SymbolMetadata{IsVariable: true}}
-	convertedCode := oc.ConvertField(ctx, targetSymbol, source, opts)
+	convertedCode := oc.ConvertField(ctx, targetSymbol, source)
 	if convertedCode == nil {
 		return nil
 	}

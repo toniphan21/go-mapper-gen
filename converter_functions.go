@@ -115,8 +115,8 @@ func (c *functionsConverter) matchFuncConverter(ctx LookupContext, targetType, s
 	return funcConverterMatch{}
 }
 
-func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source Symbol, opt ConverterOption) jen.Code {
-	return ctx.Run(c, opt, func() jen.Code {
+func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return ctx.Run(c, func() jen.Code {
 		match := c.matchFuncConverter(ctx, target.Type, source.Type)
 		if !match.CanConvert() {
 			return nil
@@ -136,7 +136,7 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 
 			// use before convert source.Type -> fn.sourceType
 			targetSymbol := Symbol{VarName: varName, Type: match.fn.sourceType, Metadata: SymbolMetadata{IsVariable: true}}
-			ccode := match.before.ConvertField(ctx, targetSymbol, source, opt)
+			ccode := match.before.ConvertField(ctx, targetSymbol, source)
 			if ccode == nil {
 				return nil
 			}
@@ -164,7 +164,7 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 
 			// use after convert fn.targetType -> target.Type
 			sourceSymbol := Symbol{VarName: varName, Type: match.fn.targetType}
-			ccode := match.after.ConvertField(ctx, target, sourceSymbol, opt)
+			ccode := match.after.ConvertField(ctx, target, sourceSymbol)
 			if ccode == nil {
 				return nil
 			}
@@ -176,7 +176,7 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 		code := jen.Var().Id(beforeVarName).Add(GeneratorUtil.TypeToJenCode(match.fn.sourceType)).Line()
 		// use before convert source.Type -> fn.sourceType
 		targetSymbol := Symbol{VarName: beforeVarName, Type: match.fn.sourceType, Metadata: SymbolMetadata{IsVariable: true}}
-		bCode := match.before.ConvertField(ctx, targetSymbol, source, opt)
+		bCode := match.before.ConvertField(ctx, targetSymbol, source)
 		if bCode == nil {
 			return nil
 		}
@@ -194,7 +194,7 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 
 		// use after convert fn.targetType -> target.Type
 		sourceSymbol := Symbol{VarName: afterVarName, Type: match.fn.targetType}
-		aCode := match.after.ConvertField(ctx, target, sourceSymbol, opt)
+		aCode := match.after.ConvertField(ctx, target, sourceSymbol)
 		if aCode == nil {
 			return nil
 		}

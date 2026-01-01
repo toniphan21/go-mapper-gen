@@ -55,8 +55,8 @@ func (c *numericConverter) CanConvert(ctx LookupContext, targetType, sourceType 
 	return ok1 && ok2
 }
 
-func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code {
-	return ctx.Run(c, opts, func() jen.Code {
+func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return ctx.Run(c, func() jen.Code {
 		switch {
 		case c.isNumeric(target.Type) && c.isNumeric(source.Type):
 			code := jen.Add(GeneratorUtil.TypeToJenCode(target.Type)).Params(source.Expr())
@@ -73,7 +73,7 @@ func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Sym
 			code := jen.Line().Var().Id(varName).Add(GeneratorUtil.TypeToJenCode(numericType)).Line()
 
 			targetSymbol := Symbol{VarName: varName, Type: numericType, Metadata: SymbolMetadata{IsVariable: true}}
-			convertedCode := oc.ConvertField(ctx, targetSymbol, source, opts)
+			convertedCode := oc.ConvertField(ctx, targetSymbol, source)
 			if convertedCode == nil {
 				return nil
 			}
@@ -96,7 +96,7 @@ func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Sym
 
 			// then convert numericType to target.Type using oc - other converter
 			sourceSymbol := Symbol{VarName: varName, Type: numericType}
-			convertedCode := oc.ConvertField(ctx, target, sourceSymbol, opts)
+			convertedCode := oc.ConvertField(ctx, target, sourceSymbol)
 			if convertedCode == nil {
 				return nil
 			}
@@ -114,7 +114,7 @@ func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Sym
 			code := jen.Line().Var().Id(beforeVarName).Add(GeneratorUtil.TypeToJenCode(beforeNumericType)).Line()
 
 			targetSymbol := Symbol{VarName: beforeVarName, Type: beforeNumericType, Metadata: SymbolMetadata{IsVariable: true}}
-			convertedCodeBefore := bc.ConvertField(ctx, targetSymbol, source, opts)
+			convertedCodeBefore := bc.ConvertField(ctx, targetSymbol, source)
 			if convertedCodeBefore == nil {
 				return nil
 			}
@@ -128,7 +128,7 @@ func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Sym
 
 			// then convert afterNumericType -> target.Type using ac - after converter
 			sourceSymbol := Symbol{VarName: afterVarName, Type: afterNumericType}
-			afterConvertedCode := ac.ConvertField(ctx, target, sourceSymbol, opts)
+			afterConvertedCode := ac.ConvertField(ctx, target, sourceSymbol)
 			if afterConvertedCode == nil {
 				return nil
 			}

@@ -26,7 +26,7 @@ type ConverterTestCase struct {
 	GoModModule                  string
 	TargetType                   string
 	SourceType                   string
-	ConverterOption              ConverterOption
+	EmitTraceComments            bool
 	TargetSymbolWithoutFieldName bool
 	SourceSymbolWithoutFieldName bool
 	TargetSymbolMetadata         SymbolMetadata
@@ -112,11 +112,12 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 
 	jf := jen.NewFilePathName(goMod.GetModule(), "test")
 	ctx := &converterContext{
-		Context:       context.Background(),
-		lookupContext: newLookupContext(),
-		jenFile:       jf,
-		parser:        parser,
-		logger:        NewNoopLogger(),
+		Context:           context.Background(),
+		lookupContext:     newLookupContext(),
+		jenFile:           jf,
+		parser:            parser,
+		logger:            NewNoopLogger(),
+		emitTraceComments: tc.EmitTraceComments,
 	}
 
 	if tc.PrintSetUp {
@@ -154,7 +155,7 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 		blocks = append(blocks, jen.Id("source").Op(":=").Id("in").Dot("sourceField"))
 	}
 
-	c := converter.ConvertField(ctx, targetSymbol, sourceSymbol, tc.ConverterOption)
+	c := converter.ConvertField(ctx, targetSymbol, sourceSymbol)
 	if c != nil {
 		blocks = append(blocks, c)
 	}

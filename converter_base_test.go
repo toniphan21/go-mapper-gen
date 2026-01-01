@@ -37,7 +37,7 @@ func Test_typeToPointerConverter(t *testing.T) {
 			Name:               "emit trace comments",
 			SourceType:         "bool",
 			TargetType:         "*bool",
-			ConverterOption:    ConverterOption{EmitTraceComments: true},
+			EmitTraceComments:  true,
 			ExpectedCanConvert: true,
 			ExpectedCode: []string{
 				"// built-in typeToPointerConverter generated code start",
@@ -115,7 +115,7 @@ func Test_pointerToTypeConverter(t *testing.T) {
 			Name:               "emit trace comments",
 			SourceType:         "*bool",
 			TargetType:         "bool",
-			ConverterOption:    ConverterOption{EmitTraceComments: true},
+			EmitTraceComments:  true,
 			ExpectedCanConvert: true,
 			ExpectedCode: []string{
 				"// built-in pointerToTypeConverter generated code start",
@@ -268,7 +268,7 @@ func Test_sliceConverter(t *testing.T) {
 			Name:               "emit trace comments",
 			SourceType:         "[]*int",
 			TargetType:         "[]int",
-			ConverterOption:    ConverterOption{EmitTraceComments: true},
+			EmitTraceComments:  true,
 			ExpectedCanConvert: true,
 			ExpectedCode: []string{
 				`// built-in sliceConverter generated code start`,

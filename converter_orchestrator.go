@@ -11,7 +11,7 @@ import (
 type orchestrator interface {
 	CanConvert(c Converter, ctx LookupContext, targetType, sourceType types.Type) bool
 
-	PerformConvert(c Converter, ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code
+	PerformConvert(c Converter, ctx ConverterContext, target, source Symbol) jen.Code
 }
 
 type TypeInfo struct {
@@ -162,15 +162,15 @@ type StandardConversionOrchestrator struct {
 	Source TypeInfo
 	Target TypeInfo
 
-	SourceToTarget               func(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code
-	OtherToSourceToTarget        func(ctx ConverterContext, target, source Symbol, otherToSource Converter, opts ConverterOption) jen.Code
-	SourceToTargetToOther        func(ctx ConverterContext, target, source Symbol, targetToOther Converter, opts ConverterOption) jen.Code
-	OtherToSourceToTargetToOther func(ctx ConverterContext, target, source Symbol, otherToSource, targetToOther Converter, opts ConverterOption) jen.Code
+	SourceToTarget               func(ctx ConverterContext, target, source Symbol) jen.Code
+	OtherToSourceToTarget        func(ctx ConverterContext, target, source Symbol, otherToSource Converter) jen.Code
+	SourceToTargetToOther        func(ctx ConverterContext, target, source Symbol, targetToOther Converter) jen.Code
+	OtherToSourceToTargetToOther func(ctx ConverterContext, target, source Symbol, otherToSource, targetToOther Converter) jen.Code
 
-	TargetToSource               func(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code
-	OtherToTargetToSource        func(ctx ConverterContext, target, source Symbol, otherToTarget Converter, opts ConverterOption) jen.Code
-	TargetToSourceToOther        func(ctx ConverterContext, target, source Symbol, sourceToOther Converter, opts ConverterOption) jen.Code
-	OtherToTargetToSourceToOther func(ctx ConverterContext, target, source Symbol, otherToTarget, sourceToOther Converter, opts ConverterOption) jen.Code
+	TargetToSource               func(ctx ConverterContext, target, source Symbol) jen.Code
+	OtherToTargetToSource        func(ctx ConverterContext, target, source Symbol, otherToTarget Converter) jen.Code
+	TargetToSourceToOther        func(ctx ConverterContext, target, source Symbol, sourceToOther Converter) jen.Code
+	OtherToTargetToSourceToOther func(ctx ConverterContext, target, source Symbol, otherToTarget, sourceToOther Converter) jen.Code
 }
 
 func (o *StandardConversionOrchestrator) routing(c Converter, ctx LookupContext, source types.Type, target types.Type) standardRouting {
@@ -263,32 +263,32 @@ func (o *StandardConversionOrchestrator) routing(c Converter, ctx LookupContext,
 	return standardRouting{route: standardRouteNone}
 }
 
-func (o *StandardConversionOrchestrator) PerformConvert(c Converter, ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code {
+func (o *StandardConversionOrchestrator) PerformConvert(c Converter, ctx ConverterContext, target, source Symbol) jen.Code {
 	routing := o.routing(c, ctx, source.Type, target.Type)
 	switch routing.route {
 	case standardRouteSourceToTarget:
-		return o.SourceToTarget(ctx, target, source, opts)
+		return o.SourceToTarget(ctx, target, source)
 
 	case standardRouteOtherToSourceToTarget:
-		return o.OtherToSourceToTarget(ctx, target, source, routing.beforeConverter, opts)
+		return o.OtherToSourceToTarget(ctx, target, source, routing.beforeConverter)
 
 	case standardRouteSourceToTargetToOther:
-		return o.SourceToTargetToOther(ctx, target, source, routing.afterConverter, opts)
+		return o.SourceToTargetToOther(ctx, target, source, routing.afterConverter)
 
 	case standardRouteOtherToSourceToTargetToOther:
-		return o.OtherToSourceToTargetToOther(ctx, target, source, routing.beforeConverter, routing.afterConverter, opts)
+		return o.OtherToSourceToTargetToOther(ctx, target, source, routing.beforeConverter, routing.afterConverter)
 
 	case standardRouteTargetToSource:
-		return o.TargetToSource(ctx, target, source, opts)
+		return o.TargetToSource(ctx, target, source)
 
 	case standardRouteOtherToTargetToSource:
-		return o.OtherToTargetToSource(ctx, target, source, routing.beforeConverter, opts)
+		return o.OtherToTargetToSource(ctx, target, source, routing.beforeConverter)
 
 	case standardRouteTargetToSourceToOther:
-		return o.TargetToSourceToOther(ctx, target, source, routing.afterConverter, opts)
+		return o.TargetToSourceToOther(ctx, target, source, routing.afterConverter)
 
 	case standardRouteOtherToTargetToSourceToOther:
-		return o.OtherToTargetToSourceToOther(ctx, target, source, routing.beforeConverter, routing.afterConverter, opts)
+		return o.OtherToTargetToSourceToOther(ctx, target, source, routing.beforeConverter, routing.afterConverter)
 
 	default:
 		return nil
@@ -359,10 +359,10 @@ type GeneratedTypeOrchestrator struct {
 	Generated TypeInfo
 	Target    TypeInfo
 
-	GeneratedToTarget        func(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code
-	GeneratedToTargetToOther func(ctx ConverterContext, target, source Symbol, targetToOther Converter, opts ConverterOption) jen.Code
-	TargetToGenerated        func(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code
-	OtherToTargetToGenerated func(ctx ConverterContext, target, source Symbol, otherToTarget Converter, opts ConverterOption) jen.Code
+	GeneratedToTarget        func(ctx ConverterContext, target, source Symbol) jen.Code
+	GeneratedToTargetToOther func(ctx ConverterContext, target, source Symbol, targetToOther Converter) jen.Code
+	TargetToGenerated        func(ctx ConverterContext, target, source Symbol) jen.Code
+	OtherToTargetToGenerated func(ctx ConverterContext, target, source Symbol, otherToTarget Converter) jen.Code
 }
 
 func (o *GeneratedTypeOrchestrator) toStandardConversionOrchestrator() *StandardConversionOrchestrator {
@@ -383,8 +383,8 @@ func (o *GeneratedTypeOrchestrator) CanConvert(c Converter, ctx LookupContext, t
 	return o.toStandardConversionOrchestrator().CanConvert(c, ctx, targetType, sourceType)
 }
 
-func (o *GeneratedTypeOrchestrator) PerformConvert(c Converter, ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code {
-	return o.toStandardConversionOrchestrator().PerformConvert(c, ctx, target, source, opts)
+func (o *GeneratedTypeOrchestrator) PerformConvert(c Converter, ctx ConverterContext, target, source Symbol) jen.Code {
+	return o.toStandardConversionOrchestrator().PerformConvert(c, ctx, target, source)
 }
 
 var _ orchestrator = (*GeneratedTypeOrchestrator)(nil)

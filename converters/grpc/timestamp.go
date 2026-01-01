@@ -44,14 +44,14 @@ func (c *timestampConverter) CanConvert(ctx gen.LookupContext, targetType, sourc
 	return c.orchestrator.CanConvert(c, ctx, targetType, sourceType)
 }
 
-func (c *timestampConverter) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
-	return ctx.Run(c, opts, func() jen.Code {
-		return c.orchestrator.PerformConvert(c, ctx, target, source, opts)
+func (c *timestampConverter) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
+	return ctx.Run(c, func() jen.Code {
+		return c.orchestrator.PerformConvert(c, ctx, target, source)
 	})
 }
 
 // timestampToTime handles *timestamppb.Timestamp -> time.Time
-func (c *timestampConverter) timestampToTime(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+func (c *timestampConverter) timestampToTime(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
 	// we need to check nil then use *timestamppb.Timestamp.AsTime
 	return jen.If(source.Expr().Op("!=").Nil()).
 		BlockFunc(func(g *jen.Group) {
@@ -65,7 +65,7 @@ func (c *timestampConverter) timestampToTime(ctx gen.ConverterContext, target, s
 }
 
 // timestampToTimeToOther handles *timestamppb.Timestamp -> T, where time.Time -> T is possible
-func (c *timestampConverter) timestampToTimeToOther(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter, opts gen.ConverterOption) jen.Code {
+func (c *timestampConverter) timestampToTimeToOther(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter) jen.Code {
 	standardTimeType := standardTimeTypeInfo.ToType()
 
 	// first convert *timestamppb.Timestamp to time.Time by checking nil and use *timestamppb.Timestamp.AsTime
@@ -79,7 +79,7 @@ func (c *timestampConverter) timestampToTimeToOther(ctx gen.ConverterContext, ta
 
 	// then convert time.Time to T
 	sourceSymbol := gen.Symbol{VarName: varName, Type: standardTimeType}
-	convertedCode := oc.ConvertField(ctx, target, sourceSymbol, opts)
+	convertedCode := oc.ConvertField(ctx, target, sourceSymbol)
 	if convertedCode == nil {
 		return nil
 	}
@@ -87,13 +87,13 @@ func (c *timestampConverter) timestampToTimeToOther(ctx gen.ConverterContext, ta
 }
 
 // timeToTimestamp handles time.Time -> *timestamppb.Timestamp
-func (c *timestampConverter) timeToTimestamp(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+func (c *timestampConverter) timeToTimestamp(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
 	// simply use timestamppb.New()
 	return target.Expr().Op("=").Qual(timestamppbPkgPath, "New").Params(source.Expr())
 }
 
 // otherToTimeToTimestamp handles T -> *timestamppb.Timestamp, where T -> time.Time is possible
-func (c *timestampConverter) otherToTimeToTimestamp(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter, opts gen.ConverterOption) jen.Code {
+func (c *timestampConverter) otherToTimeToTimestamp(ctx gen.ConverterContext, target, source gen.Symbol, oc gen.Converter) jen.Code {
 	standardTimeType := standardTimeTypeInfo.ToType()
 
 	// first convert T -> time.Time
@@ -101,7 +101,7 @@ func (c *timestampConverter) otherToTimeToTimestamp(ctx gen.ConverterContext, ta
 	code := jen.Line().Var().Id(varName).Add(gen.GeneratorUtil.TypeToJenCode(standardTimeType)).Line()
 
 	targetSymbol := gen.Symbol{VarName: varName, Type: standardTimeType, Metadata: gen.SymbolMetadata{IsVariable: true}}
-	convertedCode := oc.ConvertField(ctx, targetSymbol, source, opts)
+	convertedCode := oc.ConvertField(ctx, targetSymbol, source)
 	if convertedCode == nil {
 		return nil
 	}

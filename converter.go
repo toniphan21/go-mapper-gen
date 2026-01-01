@@ -92,7 +92,7 @@ type Converter interface {
 	// source into target. Returning nil suppresses emission.
 	//
 	// GeneratorUtil may be used to build complex expression trees.
-	ConvertField(ctx ConverterContext, target, source Symbol, opts ConverterOption) jen.Code
+	ConvertField(ctx ConverterContext, target, source Symbol) jen.Code
 }
 
 // ConverterContext provides shared capabilities and state for converters
@@ -122,16 +122,21 @@ type ConverterContext interface {
 	// If the context is done, Run returns nil and runner is not executed.
 	// This allows converters to respect generator-defined timeouts without
 	// explicitly checking ctx.Done().
-	Run(converter Converter, opts ConverterOption, runner func() jen.Code) jen.Code
+	Run(converter Converter, runner func() jen.Code) jen.Code
+
+	// EmitTraceComments indicates whether the converter should emit trace comments
+	// for debugging or inspection purposes. It returns false by default.
+	EmitTraceComments() bool
 }
 
 type converterContext struct {
 	context.Context
-	jenFile         *jen.File
-	parser          Parser
-	logger          *slog.Logger
-	currentVarCount int
-	lookupContext   *lookupContext
+	jenFile           *jen.File
+	parser            Parser
+	logger            *slog.Logger
+	currentVarCount   int
+	lookupContext     *lookupContext
+	emitTraceComments bool
 }
 
 func (c *converterContext) LookUp(current Converter, targetType, sourceType types.Type) (Converter, error) {
@@ -152,7 +157,7 @@ func (c *converterContext) NextVarName() string {
 	return v
 }
 
-func (c *converterContext) Run(converter Converter, opts ConverterOption, runner func() jen.Code) jen.Code {
+func (c *converterContext) Run(converter Converter, runner func() jen.Code) jen.Code {
 	select {
 	case <-c.Done():
 		return nil
@@ -162,7 +167,7 @@ func (c *converterContext) Run(converter Converter, opts ConverterOption, runner
 	code := runner()
 
 	var out jen.Code
-	if opts.EmitTraceComments {
+	if c.EmitTraceComments() {
 		info := converter.Info()
 		out = jen.Comment(fmt.Sprintf("%s generated code start", info.Name)).Line().
 			Add(code).Line().
@@ -177,6 +182,10 @@ func (c *converterContext) Run(converter Converter, opts ConverterOption, runner
 	default:
 		return out
 	}
+}
+
+func (c *converterContext) EmitTraceComments() bool {
+	return c.emitTraceComments
 }
 
 func (c *converterContext) Logger() *slog.Logger {
@@ -201,14 +210,4 @@ type ConverterInfo struct {
 	Name                 string
 	ShortForm            string
 	ShortFormDescription string
-}
-
-type ConverterOption struct {
-	EmitTraceComments bool
-}
-
-var defaultConverterOption = ConverterOption{}
-
-func SetConverterOption(opts ConverterOption) {
-	defaultConverterOption = opts
 }
