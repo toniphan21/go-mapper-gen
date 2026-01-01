@@ -3,7 +3,6 @@ package gomappergen
 import (
 	"context"
 	"fmt"
-	"go/types"
 	"log/slog"
 	"math"
 	"slices"
@@ -37,12 +36,14 @@ func (g *generatorImpl) Generate(currentPkg *packages.Package, configs []Package
 var _ Generator = (*generatorImpl)(nil)
 
 type convertibleField struct {
-	index           int
-	targetFieldName string
-	targetSymbol    Symbol
-	sourceFieldName string
-	sourceSymbol    Symbol
-	converter       Converter
+	index            int
+	targetFieldName  string
+	targetSymbol     Symbol
+	sourceFieldName  string
+	sourceSymbol     Symbol
+	converter        Converter
+	targetDescriptor Descriptor
+	sourceDescriptor Descriptor
 }
 
 type genMapFunc struct {
@@ -51,11 +52,11 @@ type genMapFunc struct {
 	decorateFuncName    string
 	targetPkgPath       string
 	targetParamName     string
-	targetType          types.Type
+	targetStruct        *StructInfo
 	targetPointer       bool
 	sourcePkgPath       string
 	sourceParamName     string
-	sourceType          types.Type
+	sourceStruct        *StructInfo
 	sourcePointer       bool
 	mappedFields        []convertibleField
 	missingFields       []string
@@ -68,15 +69,15 @@ func (mf *genMapFunc) paramsAndResults() ([]jen.Code, []jen.Code) {
 	var params, result []jen.Code
 
 	if mf.sourcePointer {
-		params = append(params, jen.Id(mf.sourceParamName).Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
+		params = append(params, jen.Id(mf.sourceParamName).Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceStruct.Type))))
 	} else {
-		params = append(params, jen.Id(mf.sourceParamName).Add(GeneratorUtil.TypeToJenCode(mf.sourceType)))
+		params = append(params, jen.Id(mf.sourceParamName).Add(GeneratorUtil.TypeToJenCode(mf.sourceStruct.Type)))
 	}
 
 	if mf.targetPointer {
-		result = append(result, jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+		result = append(result, jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type)))
 	} else {
-		result = append(result, jen.Add(GeneratorUtil.TypeToJenCode(mf.targetType)))
+		result = append(result, jen.Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type)))
 	}
 
 	return params, result
@@ -89,7 +90,7 @@ func (mf *genMapFunc) appendUnconvertibleField(field string) {
 func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) error {
 	ctx := &converterContext{
 		Context:       context.Background(),
-		lookupContext: newLookupContext(),
+		lookupContext: emptyLookupContext(),
 		jenFile:       file,
 		parser:        parser,
 		logger:        logger,
@@ -111,7 +112,7 @@ func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package,
 
 	logger.Info(fmt.Sprintf("\tthere are %d map functions matched with configuration.", len(mapFuncs)))
 	for _, mf := range mapFuncs {
-		logger.Info(fmt.Sprintf("\t\t- %s(%s) %s", util.ColorBlue(mf.funcName), mf.sourceType.String(), mf.targetType.String()))
+		logger.Info(fmt.Sprintf("\t\t- %s(%s) %s", util.ColorBlue(mf.funcName), mf.sourceStruct.Type.String(), mf.targetStruct.Type.String()))
 	}
 
 	switch config.Mode {
@@ -152,17 +153,17 @@ func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package
 			params = append(params,
 				jen.Id("decorators").Op("...").Func().
 					Params(
-						jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType)),
-						jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType)),
+						jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceStruct.Type)),
+						jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type)),
 					),
 			)
 		}
 
 		var body []jen.Code
-		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetType)).Line())
+		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type)).Line())
 
 		for _, field := range mf.mappedFields {
-			ctx.resetLookupContext()
+			ctx.resetLookupContext(field.targetDescriptor, field.sourceDescriptor)
 			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
@@ -203,8 +204,8 @@ func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package
 			comment := fmt.Sprintf(
 				"%v converts a %v value into a %v value.",
 				mf.funcName,
-				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.sourceType),
-				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.targetType),
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.sourceStruct.Type),
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.targetStruct.Type),
 			)
 			file.Comment(comment)
 		}
@@ -228,8 +229,8 @@ func generateMapperInterface(file *jen.File, currentPkg *packages.Package, confi
 			comment := fmt.Sprintf(
 				"%v converts a %v value into a %v value.",
 				mf.funcName,
-				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.sourceType),
-				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.targetType),
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.sourceStruct.Type),
+				GeneratorUtil.SimpleNameWithPkg(currentPkg, mf.targetStruct.Type),
 			)
 
 			signatures = append(signatures, GeneratorUtil.WrapComment(comment))
@@ -250,8 +251,8 @@ func generateDecoratorInterface(ctx *converterContext, config PackageConfig, map
 
 	for _, mf := range mapFuncs {
 		var params []jen.Code
-		params = append(params, jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
-		params = append(params, jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType))))
+		params = append(params, jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceStruct.Type))))
+		params = append(params, jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type))))
 
 		signatures = append(signatures, jen.Id(mf.decorateFuncName).Params(params...).Params().Line())
 	}
@@ -292,10 +293,10 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 		params, results := mf.paramsAndResults()
 
 		var body []jen.Code
-		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetType)).Line())
+		body = append(body, jen.Var().Id(mf.targetParamName).Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type)).Line())
 
 		for _, field := range mf.mappedFields {
-			ctx.resetLookupContext()
+			ctx.resetLookupContext(field.targetDescriptor, field.sourceDescriptor)
 			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
@@ -366,8 +367,8 @@ func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs
 
 		var body []jen.Code
 		var params []jen.Code
-		params = append(params, jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceType))))
-		params = append(params, jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetType))))
+		params = append(params, jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceStruct.Type))))
+		params = append(params, jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type))))
 
 		mau := makeMissingAndUnconvertibleFields(mf)
 		if len(mau) > 0 {
@@ -481,11 +482,11 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 				decorateFuncName:  decorateToTargetFuncName,
 				targetParamName:   "out",
 				targetPkgPath:     cf.TargetPkgPath,
-				targetType:        targetStruct.Type,
+				targetStruct:      &targetStruct,
 				targetPointer:     useTargetPointer,
 				sourceParamName:   "in",
 				sourcePkgPath:     cf.SourcePkgPath,
-				sourceType:        sourceStruct.Type,
+				sourceStruct:      &sourceStruct,
 				sourcePointer:     useSourcePointer,
 				targetFieldsIndex: makeFieldsIndex(targetStruct.Fields),
 				sourceFieldsIndex: makeFieldsIndex(sourceStruct.Fields),
@@ -508,11 +509,11 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 				decorateFuncName:  decorateFromTargetFuncName,
 				targetParamName:   "out",
 				targetPkgPath:     cf.TargetPkgPath,
-				targetType:        sourceStruct.Type,
+				targetStruct:      &sourceStruct,
 				targetPointer:     useSourcePointer,
 				sourceParamName:   "in",
 				sourcePkgPath:     cf.SourcePkgPath,
-				sourceType:        targetStruct.Type,
+				sourceStruct:      &targetStruct,
 				sourcePointer:     useTargetPointer,
 				targetFieldsIndex: makeFieldsIndex(sourceStruct.Fields),
 				sourceFieldsIndex: makeFieldsIndex(targetStruct.Fields),
@@ -548,8 +549,10 @@ func fillMapFunc(ctx *converterContext, mapFunc *genMapFunc, targetFields, sourc
 		if !ok {
 			continue
 		}
+		targetDescriptor := Descriptor{structInfo: mapFunc.targetStruct, structFieldInfo: &ti}
+		sourceDescriptor := Descriptor{structInfo: mapFunc.sourceStruct, structFieldInfo: &si}
 
-		converter, ok := findConverter(ti.Type, si.Type)
+		converter, ok := findConverter(targetDescriptor, sourceDescriptor)
 		if !ok {
 			mapFunc.unconvertibleFields = append(mapFunc.unconvertibleFields, target)
 			continue
@@ -561,17 +564,19 @@ func fillMapFunc(ctx *converterContext, mapFunc *genMapFunc, targetFields, sourc
 		}
 
 		field := convertibleField{
-			index:           ti.Index,
-			targetFieldName: target,
-			targetSymbol:    newSymbol("out", target, ti.Type),
-			sourceFieldName: source,
-			sourceSymbol:    sourceSymbol,
-			converter:       converter,
+			index:            ti.Index,
+			targetFieldName:  target,
+			targetSymbol:     newSymbol("out", target, ti.Type),
+			sourceFieldName:  source,
+			sourceSymbol:     sourceSymbol,
+			converter:        converter,
+			targetDescriptor: targetDescriptor,
+			sourceDescriptor: sourceDescriptor,
 		}
 
 		// this is a run to check that converted code is nil or not if converted code is nil we
 		// consider it unconvertible. The main run is in generator... function.
-		ctx.resetLookupContext()
+		ctx.resetLookupContext(targetDescriptor, sourceDescriptor)
 		convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol)
 		if convertedCode == nil {
 			mapFunc.appendUnconvertibleField(field.targetFieldName)

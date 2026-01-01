@@ -5,7 +5,6 @@ package example
 import (
 	v1 "github.com/toniphan21/gmg-lib/gen/go/iam/v1"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	"time"
 )
 
 type iMapper interface {
@@ -32,15 +31,9 @@ func (m *iMapperImpl) ToUser(in v1.User) User {
 	out.Email = in.Email
 	if in.UpdatedAt != nil {
 		out.UpdatedAt = in.UpdatedAt.AsTime()
-	} else {
-		var zero time.Time
-		out.UpdatedAt = zero
 	}
 	if in.CreatedAt != nil {
 		out.CreatedAt = in.CreatedAt.AsTime()
-	} else {
-		var zero time.Time
-		out.CreatedAt = zero
 	}
 
 	return out

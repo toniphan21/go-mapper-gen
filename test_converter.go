@@ -110,10 +110,13 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 	require.False(t, h.isInvalidType(targetFieldInfo.Type), "Target type is invalid, use Imports and GoModRequires to import the package")
 	require.False(t, h.isInvalidType(sourceFieldInfo.Type), "Source type is invalid, use Imports and GoModRequires to import the package")
 
+	targetDescriptor := Descriptor{structInfo: &targetStruct, structFieldInfo: &targetFieldInfo}
+	sourceDescriptor := Descriptor{structInfo: &sourceStruct, structFieldInfo: &sourceFieldInfo}
+
 	jf := jen.NewFilePathName(goMod.GetModule(), "test")
 	ctx := &converterContext{
 		Context:           context.Background(),
-		lookupContext:     newLookupContext(),
+		lookupContext:     newLookupContext(targetDescriptor, sourceDescriptor),
 		jenFile:           jf,
 		parser:            parser,
 		logger:            NewNoopLogger(),

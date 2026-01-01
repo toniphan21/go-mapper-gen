@@ -9,6 +9,15 @@ import (
 	"github.com/dave/jennifer/jen"
 )
 
+// ConverterInfo describes metadata about a Converter.
+// It is primarily used for debugging, logging, and trace comments
+// in generated code.
+type ConverterInfo struct {
+	Name                 string
+	ShortForm            string
+	ShortFormDescription string
+}
+
 // Symbol represents a reference to either a variable or a field expression
 // used during code generation.
 //
@@ -196,18 +205,19 @@ func (c *converterContext) resetVarCount() {
 	c.currentVarCount = 0
 }
 
-func (c *converterContext) resetLookupContext() {
+func (c *converterContext) resetLookupContext(target Descriptor, source Descriptor) {
 	c.lookupContext.converters = nil
+	c.lookupContext.target = target
+	c.lookupContext.source = source
+}
+
+func (c *converterContext) TargetDescriptor() Descriptor {
+	return c.lookupContext.target
+}
+
+func (c *converterContext) SourceDescriptor() Descriptor {
+	return c.lookupContext.source
 }
 
 var _ ConverterContext = (*converterContext)(nil)
 var _ LookupContext = (*converterContext)(nil)
-
-// ConverterInfo describes metadata about a Converter.
-// It is primarily used for debugging, logging, and trace comments
-// in generated code.
-type ConverterInfo struct {
-	Name                 string
-	ShortForm            string
-	ShortFormDescription string
-}

@@ -56,11 +56,6 @@ func (c *timestampConverter) timestampToTime(ctx gen.ConverterContext, target, s
 	return jen.If(source.Expr().Op("!=").Nil()).
 		BlockFunc(func(g *jen.Group) {
 			g.Add(target.Expr()).Op("=").Add(source.Expr().Dot("AsTime").Params())
-		}).
-		Else().
-		BlockFunc(func(g *jen.Group) {
-			code := g.Var().Id("zero").Add(gen.GeneratorUtil.TypeToJenCode(target.Type)).Line()
-			code = code.Add(target.Expr()).Op("=").Id("zero")
 		})
 }
 

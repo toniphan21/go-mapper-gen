@@ -13,6 +13,46 @@ func EnableLookUpCache() {
 	enableLookUpCache = true
 }
 
+type Descriptor struct {
+	structInfo      *StructInfo
+	structFieldInfo *StructFieldInfo
+}
+
+func (d *Descriptor) StructType() types.Type {
+	if d.structInfo == nil {
+		return nil
+	}
+	return d.structInfo.Type
+}
+
+func (d *Descriptor) StructFields() map[string]StructFieldInfo {
+	if d.structInfo == nil {
+		return nil
+	}
+	return d.structInfo.Fields
+}
+
+func (d *Descriptor) FieldName() string {
+	if d.structFieldInfo == nil {
+		return ""
+	}
+	return d.structFieldInfo.Name
+}
+
+func (d *Descriptor) FieldType() types.Type {
+	if d.structFieldInfo == nil {
+		return nil
+	}
+	return d.structFieldInfo.Type
+}
+
+func (d *Descriptor) FieldIndex() int {
+	if d.structFieldInfo == nil {
+		return -1
+	}
+	return d.structFieldInfo.Index
+}
+
 type lookUpCache struct {
 	converter Converter
 	target    types.Type
@@ -43,13 +83,26 @@ type LookupContext interface {
 	//   - (Converter, true) if a matching converter was found.
 	//   - (nil, false) if no converter in the registry can perform the conversion.
 	LookUp(current Converter, targetType, sourceType types.Type) (Converter, error)
+
+	TargetDescriptor() Descriptor
+
+	SourceDescriptor() Descriptor
 }
 
 type lookupContext struct {
 	converters []*registeredConverter
+	target     Descriptor
+	source     Descriptor
 }
 
-func newLookupContext() *lookupContext {
+func newLookupContext(target Descriptor, source Descriptor) *lookupContext {
+	return &lookupContext{
+		target: target,
+		source: source,
+	}
+}
+
+func emptyLookupContext() *lookupContext {
 	return &lookupContext{}
 }
 
@@ -82,6 +135,8 @@ func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.T
 
 	ctx := &lookupContext{
 		converters: reachable,
+		target:     l.target,
+		source:     l.source,
 	}
 	var nextContext []string
 	for _, converter := range ctx.converters {
@@ -116,15 +171,25 @@ func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.T
 	return nil, fmt.Errorf("unable to find matching converter for target %s, source %s", targetType.String(), sourceType.String())
 }
 
-func findConverter(targetType, sourceType types.Type) (Converter, bool) {
+func (l *lookupContext) TargetDescriptor() Descriptor {
+	return l.target
+}
+
+func (l *lookupContext) SourceDescriptor() Descriptor {
+	return l.source
+}
+
+var _ LookupContext = (*lookupContext)(nil)
+
+func findConverter(target, source Descriptor) (Converter, bool) {
 	for _, reg := range globalConverters {
 		LookUpTotalHits++
-		if reg.converter.CanConvert(newLookupContext(), targetType, sourceType) {
+		if reg.converter.CanConvert(newLookupContext(target, source), target.structFieldInfo.Type, source.structFieldInfo.Type) {
 			if enableLookUpCache {
 				lkCache = append(lkCache, lookUpCache{
 					converter: reg.converter,
-					target:    targetType,
-					source:    sourceType,
+					target:    target.structFieldInfo.Type,
+					source:    source.structFieldInfo.Type,
 				})
 			}
 			return reg.converter, true
