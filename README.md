@@ -262,7 +262,7 @@ Take a look at examples of how to:
 - Use functions to convert custom type: 
   [use package level functions](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/01-use-package-level-functions),
   [use variable methods](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/02-use-variable-methods).
-- Use go-mapper-gen as a library.
+- [Use go-mapper-gen as a library.](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/use-as-library)
 
 ---
 

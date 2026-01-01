@@ -5,8 +5,8 @@ github.com/dave/jennifer v1.7.1/go.mod h1:nXbxhEmQfOZhWml3D1cDK5M1FLnMSozpbFN/m3
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/toniphan21/go-mapper-gen v0.3.0 h1:v59cRrNlgvZK7CZfsXYwABzo8o89Ko1ibbpDdfHBMGo=
-github.com/toniphan21/go-mapper-gen v0.3.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
+github.com/toniphan21/go-mapper-gen v0.4.0 h1:1/rjoqiewbuw7j/R8047LYhvajXzAxd3grUVJVxL4w4=
+github.com/toniphan21/go-mapper-gen v0.4.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
 github.com/vmihailenco/msgpack/v5 v5.4.1/go.mod h1:GaZTsDaehaPpQVyxrf5mtQlH+pc21PIudVV/E3rRQok=
 github.com/vmihailenco/tagparser/v2 v2.0.0/go.mod h1:Wri+At7QHww0WTrCBeu4J6bNtoV6mEfg5OIWRZA9qds=
 golang.org/x/mod v0.31.0/go.mod h1:43JraMp9cGx1Rx3AqioxrbrhNsLl2l/iNAvuBkrezpg=

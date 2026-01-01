@@ -4,7 +4,7 @@ go 1.25
 
 require github.com/dave/jennifer v1.7.1
 
-require github.com/toniphan21/go-mapper-gen v0.3.0
+require github.com/toniphan21/go-mapper-gen v0.4.0
 
 require (
 	github.com/IGLOU-EU/go-wildcard v1.0.3 // indirect

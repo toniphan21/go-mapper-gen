@@ -8,7 +8,7 @@ module github.com/toniphan21/awesome
 go 1.25
 
 require github.com/dave/jennifer v1.7.1
-require github.com/toniphan21/go-mapper-gen v0.3.0
+require github.com/toniphan21/go-mapper-gen v0.4.0
 ```
 
 The `go.sum` is:
@@ -16,8 +16,8 @@ The `go.sum` is:
 ```go.sum
 github.com/dave/jennifer v1.7.1 h1:B4jJJDHelWcDhlRQxWeo0Npa/pYKBLrirAQoTN45txo=
 github.com/dave/jennifer v1.7.1/go.mod h1:nXbxhEmQfOZhWml3D1cDK5M1FLnMSozpbFN/m3RmGZc=
-github.com/toniphan21/go-mapper-gen v0.3.0 h1:v59cRrNlgvZK7CZfsXYwABzo8o89Ko1ibbpDdfHBMGo=
-github.com/toniphan21/go-mapper-gen v0.3.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
+github.com/toniphan21/go-mapper-gen v0.4.0 h1:1/rjoqiewbuw7j/R8047LYhvajXzAxd3grUVJVxL4w4=
+github.com/toniphan21/go-mapper-gen v0.4.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
 ```
 
 Then set up a command to use as a generator
