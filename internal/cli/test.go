@@ -248,7 +248,8 @@ func (r *testRunner) runTestCase(cmd TestCmd, mdTestCase gen.MarkdownTestCase, t
 
 	if mdTestCase.PklDevFileContent != nil {
 		configFile := file.MakePklDevConfigFile(
-			pkl.AmendsPath(),
+			pkl.AmendsPath(cmd.PklBaseURL),
+			pkl.ImportPaths(cmd.PklBaseURL),
 			"mapper.pkl",
 			[]string{string(mdTestCase.PklDevFileContent)},
 		)

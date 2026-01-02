@@ -25,6 +25,7 @@ type TestCmd struct {
 	LogGenerate bool     `arg:"-l,--log-generate" help:"Log in generate code process" default:"false"`
 	EmitCode    bool     `arg:"-e,--emit-code" help:"Emit to code if the test passed" default:"false"`
 	ShowSetup   bool     `arg:"-s,--show-setup" help:"Show test setup step, if you are running less than 10 test cases it will be show by default"`
+	PklBaseURL  string   `arg:"-p,--pkl-base-url" help:"pkl base url" default:"https://github.com/toniphan21/go-mapper-gen/releases/download/current"`
 }
 
 type Args struct {

@@ -1,0 +1,18 @@
+// Field helper functions for go-mapper-gen - v0.5.0
+@go.Package { name = "github.com/toniphan21/go-mapper-gen/pkg/pkl/set" }
+module gomappergen.set
+
+import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.11.1#/go.pkl"
+
+import "mapper.pkl"
+
+function nil_if_zero(): mapper.FieldInterceptor = new mapper.FieldInterceptor {
+  type = "nil-if-zero"
+}
+
+function via_function(symbol: String): mapper.FieldInterceptor = new mapper.FieldInterceptor {
+  type = "use-function"
+  options {
+    ["symbol"] = symbol
+  }
+}

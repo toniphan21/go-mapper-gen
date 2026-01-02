@@ -14,15 +14,16 @@ import (
 )
 
 type GoldenTestCase struct {
-	Name              string
-	GoModFileContent  []byte
-	GoSumFileContent  []byte
-	PklDevFileContent []byte
-	SourceFiles       map[string][]byte
-	GoldenFiles       map[string][]byte
-	PrintSetup        bool
-	PrintActual       bool
-	PrintDiff         bool
+	Name                     string
+	GoModFileContent         []byte
+	GoSumFileContent         []byte
+	PklDevFileContent        []byte
+	SourceFiles              map[string][]byte
+	GoldenFiles              map[string][]byte
+	PrintSetup               bool
+	PrintActual              bool
+	PrintDiff                bool
+	FieldInterceptorProvider FieldInterceptorProvider
 }
 
 type GoldenTestCaseFromTestData struct {
@@ -88,10 +89,13 @@ func TestWithSetupConverter(fn func()) GoldenTestCaseRunOptionsFunc {
 type goldenTest struct {
 }
 
-func (h *goldenTest) configFromPklDevFileContent(t *testing.T, content []byte) (*Config, error) {
+func (h *goldenTest) configFromPklDevFileContent(t *testing.T, content []byte, provider FieldInterceptorProvider) (*Config, error) {
 	dir := setup.SourceCode(t, setup.PklLibFiles(), file.PklDevConfigFile(string(content)))
 
-	return ParseConfig(filepath.Join(dir, "dev/config.pkl"))
+	if provider == nil {
+		provider = DefaultFieldInterceptorProvider()
+	}
+	return ParseConfig(filepath.Join(dir, "dev/config.pkl"), provider)
 }
 
 func (h *goldenTest) SetupGoldenTestCaseForPackage(t *testing.T, tc GoldenTestCase, pkgPath string) (Parser, *packages.Package, []PackageConfig) {
@@ -109,7 +113,7 @@ func (h *goldenTest) SetupGoldenTestCaseForPackage(t *testing.T, tc GoldenTestCa
 }
 
 func (h *goldenTest) SetupGoldenTestCase(t *testing.T, tc GoldenTestCase) (Parser, *Config) {
-	config, err := h.configFromPklDevFileContent(t, tc.PklDevFileContent)
+	config, err := h.configFromPklDevFileContent(t, tc.PklDevFileContent, tc.FieldInterceptorProvider)
 	require.NoError(t, err, "cannot set up pkl config file")
 
 	var sourceFiles []file.File

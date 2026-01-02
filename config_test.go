@@ -13,7 +13,7 @@ import (
 )
 
 func TestParseConfig_FileNotFound(t *testing.T) {
-	cf, err := ParseConfig(path.Join(t.TempDir(), "not-found.pkl"))
+	cf, err := ParseConfig(path.Join(t.TempDir(), "not-found.pkl"), DefaultFieldInterceptorProvider())
 
 	assert.Nil(t, cf)
 	assert.ErrorIs(t, err, os.ErrNotExist)
@@ -40,7 +40,7 @@ func TestParseConfig_Invalid(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := setup.SourceCode(t, setup.PklLibFiles(), file.PklDevConfigFile(tc.config...))
-			result, err := ParseConfig(filepath.Join(dir, "dev/config.pkl"))
+			result, err := ParseConfig(filepath.Join(dir, "dev/config.pkl"), DefaultFieldInterceptorProvider())
 
 			assert.ErrorIs(t, err, tc.expectedErrorIs)
 			assert.Nil(t, result)
@@ -279,7 +279,7 @@ func TestParseConfig(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := setup.SourceCode(t, setup.PklLibFiles(), file.PklDevConfigFile(tc.config...))
-			config, err := ParseConfig(filepath.Join(dir, "dev/config.pkl"))
+			config, err := ParseConfig(filepath.Join(dir, "dev/config.pkl"), DefaultFieldInterceptorProvider())
 			result := config.Packages
 
 			assert.NoError(t, err)

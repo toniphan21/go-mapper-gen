@@ -23,6 +23,7 @@ type RunCommand struct {
 	PrintRegisteredConverters bool
 	Parser                    gen.Parser
 	FileManager               gen.FileManager
+	FieldInterceptorProvider  gen.FieldInterceptorProvider
 	Logger                    *slog.Logger
 	RegisterConverters        func()
 }
@@ -47,7 +48,12 @@ func Run(cmd RunCommand) error {
 	cff := filepath.Join(cmd.WorkingDir, cfn)
 	logger.Info(util.ColorGreen(appName) + " uses configuration file: " + util.ColorCyan(cff))
 
-	parsedConfig, err := gen.ParseConfig(cff)
+	fip := cmd.FieldInterceptorProvider
+	if fip == nil {
+		fip = gen.DefaultFieldInterceptorProvider()
+	}
+
+	parsedConfig, err := gen.ParseConfig(cff, fip)
 	if err != nil {
 		logger.Error(util.ColorRed("failed to load configuration file."))
 		return err

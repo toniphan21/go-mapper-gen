@@ -28,6 +28,8 @@ func TestGolden(t *testing.T) {
 		{file: "testdata/placeholder.md"},
 		{file: "testdata/decorator.md"},
 		{file: "testdata/decorator-mode.md"},
+
+		{file: "testdata/field-interceptor.md"},
 	}
 
 	for _, tc := range cases {

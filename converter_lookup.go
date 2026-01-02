@@ -3,6 +3,8 @@ package gomappergen
 import (
 	"fmt"
 	"go/types"
+
+	"github.com/dave/jennifer/jen"
 )
 
 var LookUpTotalHits uint64
@@ -90,9 +92,10 @@ type LookupContext interface {
 }
 
 type lookupContext struct {
-	converters []*registeredConverter
-	target     Descriptor
-	source     Descriptor
+	converters  []*registeredConverter
+	target      Descriptor
+	source      Descriptor
+	interceptor FieldInterceptor
 }
 
 func newLookupContext(target Descriptor, source Descriptor) *lookupContext {
@@ -134,9 +137,10 @@ func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.T
 	}
 
 	ctx := &lookupContext{
-		converters: reachable,
-		target:     l.target,
-		source:     l.source,
+		converters:  reachable,
+		target:      l.target,
+		source:      l.source,
+		interceptor: l.interceptor,
 	}
 	var nextContext []string
 	for _, converter := range ctx.converters {
@@ -165,7 +169,7 @@ func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.T
 					source:    sourceType,
 				})
 			}
-			return reg.converter, nil
+			return wrapFieldInterceptor(reg.converter, l.interceptor), nil
 		}
 	}
 	return nil, fmt.Errorf("unable to find matching converter for target %s, source %s", targetType.String(), sourceType.String())
@@ -180,6 +184,36 @@ func (l *lookupContext) SourceDescriptor() *Descriptor {
 }
 
 var _ LookupContext = (*lookupContext)(nil)
+
+func wrapFieldInterceptor(converter Converter, interceptor FieldInterceptor) Converter {
+	if interceptor == nil {
+		return converter
+	}
+	return &wrappedConverter{converter: converter, interceptor: interceptor}
+}
+
+type wrappedConverter struct {
+	converter   Converter
+	interceptor FieldInterceptor
+}
+
+func (w *wrappedConverter) Init(parser Parser, config Config) {
+	w.converter.Init(parser, config)
+}
+
+func (w *wrappedConverter) Info() ConverterInfo {
+	return w.converter.Info()
+}
+
+func (w *wrappedConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
+	return w.converter.CanConvert(ctx, targetType, sourceType)
+}
+
+func (w *wrappedConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return w.interceptor.InterceptConvertField(w.converter, ctx, target, source)
+}
+
+var _ Converter = (*wrappedConverter)(nil)
 
 func findConverter(target, source Descriptor) (Converter, bool) {
 	for _, reg := range globalConverters {

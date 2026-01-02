@@ -44,10 +44,18 @@ class Converter {
   }
 }
 
+class FieldInterceptor {
+  type: String
+  options: Mapping<String, Any>
+}
+
 class Fields {
   match: "exact" | "ignore-case" = "ignore-case"
 
   map: Mapping<String, String>?
+
+  target: Mapping<String, FieldInterceptor>?
+  source: Mapping<String, FieldInterceptor>?
 }
 
 /// Configuration for mapping between a specific source struct

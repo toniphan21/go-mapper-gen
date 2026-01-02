@@ -44,6 +44,16 @@ type convertibleField struct {
 	converter        Converter
 	targetDescriptor Descriptor
 	sourceDescriptor Descriptor
+	interceptor      FieldInterceptor
+}
+
+func (f *convertibleField) PerformConvertField(ctx *converterContext) jen.Code {
+	if f.interceptor == nil {
+		ctx.resetFieldInterceptor()
+		return f.converter.ConvertField(ctx, f.targetSymbol, f.sourceSymbol)
+	}
+	ctx.setFieldInterceptor(f.interceptor)
+	return f.interceptor.InterceptConvertField(f.converter, ctx, f.targetSymbol, f.sourceSymbol)
 }
 
 type genMapFunc struct {
@@ -164,7 +174,7 @@ func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package
 
 		for _, field := range mf.mappedFields {
 			ctx.resetLookupContext(field.targetDescriptor, field.sourceDescriptor)
-			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol)
+			convertedCode := field.PerformConvertField(ctx)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
 			}
@@ -297,7 +307,7 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 
 		for _, field := range mf.mappedFields {
 			ctx.resetLookupContext(field.targetDescriptor, field.sourceDescriptor)
-			convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol)
+			convertedCode := field.PerformConvertField(ctx)
 			if convertedCode != nil {
 				body = append(body, convertedCode)
 			}
@@ -492,7 +502,7 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 				sourceFieldsIndex: makeFieldsIndex(sourceStruct.Fields),
 			}
 
-			fillMapFunc(ctx, &mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields, cf.UseGetter)
+			fillMapFunc(ctx, &mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields, cf.UseGetter, cf.TargetFieldInterceptors)
 			mapFuncs = append(mapFuncs, &mapFunc)
 		}
 
@@ -519,14 +529,21 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 				sourceFieldsIndex: makeFieldsIndex(targetStruct.Fields),
 			}
 
-			fillMapFunc(ctx, &mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip(), cf.UseGetter)
+			fillMapFunc(ctx, &mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip(), cf.UseGetter, cf.SourceFieldInterceptors)
 			mapFuncs = append(mapFuncs, &mapFunc)
 		}
 	}
 	return mapFuncs, nil
 }
 
-func fillMapFunc(ctx *converterContext, mapFunc *genMapFunc, targetFields, sourceFields map[string]StructFieldInfo, config FieldConfig, useGetter bool) {
+func fillMapFunc(
+	ctx *converterContext,
+	mapFunc *genMapFunc,
+	targetFields, sourceFields map[string]StructFieldInfo,
+	config FieldConfig,
+	useGetter bool,
+	interceptors map[string]FieldInterceptor,
+) {
 	samePkg := mapFunc.targetPkgPath == mapFunc.sourcePkgPath
 	mappedFields := mapFieldNames(targetFields, sourceFields, config, samePkg)
 	for target, source := range mappedFields {
@@ -563,6 +580,11 @@ func fillMapFunc(ctx *converterContext, mapFunc *genMapFunc, targetFields, sourc
 			sourceSymbol = sourceSymbol.toGetterSymbol(*si.Getter)
 		}
 
+		var interceptor FieldInterceptor
+		if interceptors != nil {
+			interceptor = interceptors[target]
+		}
+
 		field := convertibleField{
 			index:            ti.Index,
 			targetFieldName:  target,
@@ -572,12 +594,13 @@ func fillMapFunc(ctx *converterContext, mapFunc *genMapFunc, targetFields, sourc
 			converter:        converter,
 			targetDescriptor: targetDescriptor,
 			sourceDescriptor: sourceDescriptor,
+			interceptor:      interceptor,
 		}
 
 		// this is a run to check that converted code is nil or not if converted code is nil we
 		// consider it unconvertible. The main run is in generator... function.
 		ctx.resetLookupContext(targetDescriptor, sourceDescriptor)
-		convertedCode := field.converter.ConvertField(ctx, field.targetSymbol, field.sourceSymbol)
+		convertedCode := field.PerformConvertField(ctx)
 		if convertedCode == nil {
 			mapFunc.appendUnconvertibleField(field.targetFieldName)
 		}

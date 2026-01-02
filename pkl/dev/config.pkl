@@ -1,8 +1,12 @@
 amends ".../Config.pkl"
 
+import "../set.pkl"
+
 all {
   output { file_name = "mycode.go" }
 }
+
+local function package(path: String): String = "a" + path
 
 converter {
   built_in {
@@ -20,14 +24,34 @@ converter {
 }
 
 packages {
-  ["github.com/toniphan21/singular"] {
+  ["github.com/toniphan21/go-mapper-gen"] {
     mode = "functions"
 
     source_pkg = "{CurrentPackage}"
     decorator_noop_name = ""
 
+    generate_source_from_target = false
+
     structs {
-      ["LoginParams"] { source_struct_name = "Login" }
+      ["Login"] {}
+
+      ["LoginParams"] {
+        source_struct_name = "Login"
+        fields {
+          // use listing
+          target {
+            ["Name"] = set.nil_if_zero()
+            ["Password"] = set.via_function("TextToNilableString")
+          }
+
+          // use listing<map>
+          source {
+            Map("Name", set.nil_if_zero())
+
+            Map("Password", set.via_function(""))
+          }
+        }
+      }
     }
   }
 
@@ -37,7 +61,13 @@ packages {
         source_pkg = "{CurrentPackage}"
 
         structs {
-          ["LoginParams"] { source_struct_name = "Login" }
+          ["LoginParams"] {
+            source_struct_name = "Login"
+
+            fields {
+              target { ["Name"] = set.nil_if_zero() }
+            }
+          }
         }
       }
 

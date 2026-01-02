@@ -8,6 +8,7 @@ func init() {
 	pkl.RegisterStrictMapping("gomappergen.mapper#BuiltInConverter", BuiltInConverter{})
 	pkl.RegisterStrictMapping("gomappergen.mapper#BuiltInLibraryConverter", BuiltInLibraryConverter{})
 	pkl.RegisterStrictMapping("gomappergen.mapper", Mapper{})
+	pkl.RegisterStrictMapping("gomappergen.mapper#FieldInterceptor", FieldInterceptor{})
 	pkl.RegisterStrictMapping("gomappergen.mapper#Fields", Fields{})
 	pkl.RegisterStrictMapping("gomappergen.mapper#Struct", Struct{})
 	pkl.RegisterStrictMapping("gomappergen.mapper#Package", PackageImpl{})

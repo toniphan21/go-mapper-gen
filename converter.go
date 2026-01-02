@@ -209,6 +209,15 @@ func (c *converterContext) resetLookupContext(target Descriptor, source Descript
 	c.lookupContext.converters = nil
 	c.lookupContext.target = target
 	c.lookupContext.source = source
+	c.lookupContext.interceptor = nil
+}
+
+func (c *converterContext) setFieldInterceptor(interceptor FieldInterceptor) {
+	c.lookupContext.interceptor = interceptor
+}
+
+func (c *converterContext) resetFieldInterceptor() {
+	c.lookupContext.interceptor = nil
 }
 
 func (c *converterContext) TargetDescriptor() *Descriptor {

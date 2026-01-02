@@ -100,6 +100,9 @@ type StructConfig struct {
 	Pointer Pointer
 	Fields  FieldConfig
 
+	SourceFieldInterceptors map[string]FieldInterceptor
+	TargetFieldInterceptors map[string]FieldInterceptor
+
 	UseGetter bool
 
 	GenerateSourceToTarget   bool
@@ -187,7 +190,7 @@ var Default = defaultCfValue{
 	TargetPkgPath:            Placeholder.CurrentPackage,
 }
 
-func ParseConfig(path string) (*Config, error) {
+func ParseConfig(path string, provider FieldInterceptorProvider) (*Config, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, err
 	}
@@ -196,11 +199,13 @@ func ParseConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return MakeConfig(cfg)
+	return MakeConfig(cfg, provider)
 }
 
-func MakeConfig(cfg pkl.Config) (*Config, error) {
-	m := &configMapper{}
+func MakeConfig(cfg pkl.Config, provider FieldInterceptorProvider) (*Config, error) {
+	m := &configMapper{
+		provider: provider,
+	}
 	pkgConfigs, err := m.mapPackagesConfig(cfg.Packages, cfg.All)
 	if err != nil {
 		return nil, err
@@ -215,7 +220,9 @@ func MakeConfig(cfg pkl.Config) (*Config, error) {
 	}, nil
 }
 
-type configMapper struct{}
+type configMapper struct {
+	provider FieldInterceptorProvider
+}
 
 func (m *configMapper) mapBuiltInConverterConfig(in mapper.BuiltInConverter) BuiltInConverterConfig {
 	return BuiltInConverterConfig{
@@ -327,6 +334,8 @@ func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 			DecorateFuncName:         mergeConfigValue(v.DecorateFunctionName, cf.GetDecorateFunctionName()),
 			Pointer:                  m.mapPointer(v.Pointer),
 			Fields:                   m.mapFieldConfig(v.Fields),
+			SourceFieldInterceptors:  m.mapFieldInterceptor(v.Fields.Source),
+			TargetFieldInterceptors:  m.mapFieldInterceptor(v.Fields.Target),
 			UseGetter:                mergeConfigValue(v.UseGetterIfAvailable, cf.GetUseGetterIfAvailable()),
 			GenerateSourceToTarget:   mergeConfigValue(v.GenerateSourceToTarget, cf.GetGenerateSourceToTarget()),
 			GenerateSourceFromTarget: mergeConfigValue(v.GenerateSourceFromTarget, cf.GetGenerateSourceFromTarget()),
@@ -423,6 +432,26 @@ func (m *configMapper) mapFieldConfig(in mapper.Fields) FieldConfig {
 		NameMatch: m.mapNameMatch(in.Match),
 		ManualMap: manualMap,
 	}
+}
+
+func (m *configMapper) mapFieldInterceptor(in *map[string]mapper.FieldInterceptor) map[string]FieldInterceptor {
+	if in == nil {
+		return nil
+	}
+
+	input := *in
+	if input == nil {
+		return nil
+	}
+
+	var result = make(map[string]FieldInterceptor)
+	for k, v := range input {
+		i := m.provider.MakeFieldInterceptor(v.Type, v.Options)
+		if i != nil {
+			result[k] = i
+		}
+	}
+	return result
 }
 
 func mergeConfigValue[T any](structLevelValue *T, pkgLevelValue T) T {
