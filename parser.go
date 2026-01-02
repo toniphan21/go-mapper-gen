@@ -18,6 +18,9 @@ type StructInfo struct {
 type StructFieldInfo struct {
 	Name       string
 	Getter     *string
+	Tag        *string
+	Comment    *string
+	Doc        *string
 	Type       types.Type
 	Index      int
 	IsExported bool
@@ -240,12 +243,33 @@ func (p *parserImpl) structFields(pkg *packages.Package, sa *ast.StructType, st 
 			v := "Get" + fieldName
 			getter = &v
 		}
+
+		var tag *string
+		if field.Tag != nil {
+			tag = &field.Tag.Value
+		}
+
+		var comment *string
+		if field.Comment != nil {
+			v := field.Comment.Text()
+			comment = &v
+		}
+
+		var doc *string
+		if field.Doc != nil {
+			v := field.Doc.Text()
+			doc = &v
+		}
+
 		fields[fieldName] = StructFieldInfo{
 			Name:       fieldName,
+			Getter:     getter,
+			Tag:        tag,
+			Comment:    comment,
+			Doc:        doc,
 			Type:       fieldType,
 			Index:      idx,
 			IsExported: isExported,
-			Getter:     getter,
 		}
 	}
 	return fields

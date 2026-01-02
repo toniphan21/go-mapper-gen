@@ -211,12 +211,12 @@ func (c *converterContext) resetLookupContext(target Descriptor, source Descript
 	c.lookupContext.source = source
 }
 
-func (c *converterContext) TargetDescriptor() Descriptor {
-	return c.lookupContext.target
+func (c *converterContext) TargetDescriptor() *Descriptor {
+	return &c.lookupContext.target
 }
 
-func (c *converterContext) SourceDescriptor() Descriptor {
-	return c.lookupContext.source
+func (c *converterContext) SourceDescriptor() *Descriptor {
+	return &c.lookupContext.source
 }
 
 var _ ConverterContext = (*converterContext)(nil)

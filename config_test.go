@@ -204,7 +204,7 @@ func TestParseConfig(t *testing.T) {
 				`	["github.com/example/repo"] {`,
 				`		source_pkg = "{CurrentPackage}/source"`,
 				`		structs {`,
-				`			["Target"] {}`,
+				`			["Entity"] {}`,
 				`		}`,
 				`	}`,
 				`}`,
@@ -212,8 +212,8 @@ func TestParseConfig(t *testing.T) {
 			expected: map[string][]PackageConfig{
 				"github.com/example/repo": {
 					buildConfig(nil, expectedStruct{
-						TargetStructName: "Target",
-						SourceStructName: "Target",
+						TargetStructName: "Entity",
+						SourceStructName: "Entity",
 						SourcePkgPath:    "{CurrentPackage}/source",
 					}),
 				},

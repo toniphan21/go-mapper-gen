@@ -1,4 +1,4 @@
-// Mapper configuration for go-mapper-gen - v0.4.0
+// Mapper configuration for go-mapper-gen - v0.5.0
 // Can be embeded into a bigger pkl configuration schema.
 @go.Package { name = "github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper" }
 module gomappergen.mapper

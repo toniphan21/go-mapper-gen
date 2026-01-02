@@ -84,9 +84,9 @@ type LookupContext interface {
 	//   - (nil, false) if no converter in the registry can perform the conversion.
 	LookUp(current Converter, targetType, sourceType types.Type) (Converter, error)
 
-	TargetDescriptor() Descriptor
+	TargetDescriptor() *Descriptor
 
-	SourceDescriptor() Descriptor
+	SourceDescriptor() *Descriptor
 }
 
 type lookupContext struct {
@@ -171,12 +171,12 @@ func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.T
 	return nil, fmt.Errorf("unable to find matching converter for target %s, source %s", targetType.String(), sourceType.String())
 }
 
-func (l *lookupContext) TargetDescriptor() Descriptor {
-	return l.target
+func (l *lookupContext) TargetDescriptor() *Descriptor {
+	return &l.target
 }
 
-func (l *lookupContext) SourceDescriptor() Descriptor {
-	return l.source
+func (l *lookupContext) SourceDescriptor() *Descriptor {
+	return &l.source
 }
 
 var _ LookupContext = (*lookupContext)(nil)

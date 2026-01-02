@@ -85,12 +85,14 @@ convert both ways.
 // file: mapper.pkl
 amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
+local function package(path: String) = "github.com/toniphan21/go-mapper-gen/basic/" + path
+
 packages {
-	["github.com/toniphan21/go-mapper-gen/basic/db"] {
-		source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
+	[package("db")] {
+		source_pkg = package("domain")
 
 		structs {
-			["User"] { source_struct_name = "User" }
+			["User"] {}
 		}
 	}
 }
@@ -177,7 +179,8 @@ type Mapper interface { iMapper }
 ```
 
 You can customize names (interface, implementation, constructor) in the Pkl config.
-See [Config.pkl](https://github.com/toniphan21/go-mapper-gen/blob/main/pkl/Config.pkl) for all options.
+See [Config.pkl](https://github.com/toniphan21/go-mapper-gen/blob/main/pkl/Config.pkl), 
+[mapper.pkl](https://github.com/toniphan21/go-mapper-gen/blob/main/pkl/mapper.pkl) for all options.
 
 ---
 
@@ -189,13 +192,15 @@ Switch to functions mode to emit only functions:
 // file: mapper.pkl
 amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
+local function package(path: String) = "github.com/toniphan21/go-mapper-gen/basic/" + path
+
 packages {
-	["github.com/toniphan21/go-mapper-gen/basic/db"] {
+	[package("db")] {
 		mode = "functions"
-		source_pkg = "github.com/toniphan21/go-mapper-gen/basic/domain"
+		source_pkg = package("domain")
 
 		structs {
-			["User"] { source_struct_name = "User" }
+			["User"] {}
 		}
 	}
 }
