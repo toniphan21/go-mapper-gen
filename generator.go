@@ -588,7 +588,7 @@ func fillMapFunc(
 		field := convertibleField{
 			index:            ti.Index,
 			targetFieldName:  target,
-			targetSymbol:     newSymbol("out", target, ti.Type),
+			targetSymbol:     newSymbolWithMetadata("out", target, ti.Type, SymbolMetadata{HasZeroValue: true}),
 			sourceFieldName:  source,
 			sourceSymbol:     sourceSymbol,
 			converter:        converter,

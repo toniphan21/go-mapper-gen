@@ -83,14 +83,9 @@ func (m *iMapperImpl) ToUser(in UserEntity) User {
 	out.ID = in.ID
 	if in.Email != nil {
 		out.Email = *in.Email
-	} else {
-		var zero string
-		out.Email = zero
 	}
 	var v0 string
-	if in.Name == v0 {
-		out.Name = nil
-	} else {
+	if in.Name != v0 {
 		out.Name = &in.Name
 	}
 
@@ -102,16 +97,11 @@ func (m *iMapperImpl) FromUser(in User) UserEntity {
 
 	out.ID = in.ID
 	var v0 string
-	if in.Email == v0 {
-		out.Email = nil
-	} else {
+	if in.Email != v0 {
 		out.Email = &in.Email
 	}
 	if in.Name != nil {
 		out.Name = *in.Name
-	} else {
-		var zero string
-		out.Name = zero
 	}
 
 	return out

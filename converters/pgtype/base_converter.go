@@ -146,7 +146,7 @@ func (b *baseConverter[T, V]) otherToTargetToPGType(ctx gen.ConverterContext, ta
 	// first convert source to [[Target]] hold in a temporary variable
 	varName := ctx.NextVarName()
 	code := jen.Line().Var().Id(varName).Add(gen.GeneratorUtil.TypeToJenCode(b.targetedType)).Line()
-	targetSymbol := gen.Symbol{VarName: varName, Type: b.targetedType, Metadata: gen.SymbolMetadata{IsVariable: true}}
+	targetSymbol := gen.Symbol{VarName: varName, Type: b.targetedType, Metadata: gen.SymbolMetadata{IsVariable: true, HasZeroValue: true}}
 	convertedCode := oc.ConvertField(ctx, targetSymbol, source)
 	if convertedCode == nil {
 		return nil

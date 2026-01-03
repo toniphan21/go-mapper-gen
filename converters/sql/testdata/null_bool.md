@@ -81,9 +81,6 @@ func (m *iMapperImpl) ToDomain(in Database) Domain {
 	}
 	if v0 != nil {
 		out.B = *v0
-	} else {
-		var zero bool
-		out.B = zero
 	}
 
 	return out

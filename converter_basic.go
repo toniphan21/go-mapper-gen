@@ -72,7 +72,7 @@ func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Sym
 			varName := ctx.NextVarName()
 			code := jen.Line().Var().Id(varName).Add(GeneratorUtil.TypeToJenCode(numericType)).Line()
 
-			targetSymbol := Symbol{VarName: varName, Type: numericType, Metadata: SymbolMetadata{IsVariable: true}}
+			targetSymbol := Symbol{VarName: varName, Type: numericType, Metadata: SymbolMetadata{IsVariable: true, HasZeroValue: true}}
 			convertedCode := oc.ConvertField(ctx, targetSymbol, source)
 			if convertedCode == nil {
 				return nil
@@ -113,7 +113,7 @@ func (c *numericConverter) ConvertField(ctx ConverterContext, target, source Sym
 			beforeVarName := ctx.NextVarName()
 			code := jen.Line().Var().Id(beforeVarName).Add(GeneratorUtil.TypeToJenCode(beforeNumericType)).Line()
 
-			targetSymbol := Symbol{VarName: beforeVarName, Type: beforeNumericType, Metadata: SymbolMetadata{IsVariable: true}}
+			targetSymbol := Symbol{VarName: beforeVarName, Type: beforeNumericType, Metadata: SymbolMetadata{IsVariable: true, HasZeroValue: true}}
 			convertedCodeBefore := bc.ConvertField(ctx, targetSymbol, source)
 			if convertedCodeBefore == nil {
 				return nil

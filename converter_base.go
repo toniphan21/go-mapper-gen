@@ -94,7 +94,7 @@ func (c *pointerToTypeConverter) ConvertField(ctx ConverterContext, target, sour
 				gc = gc.Op("*").Add(source.Expr())
 			})
 
-		if !target.Metadata.IsVariable {
+		if !target.Metadata.HasZeroValue {
 			code = code.Else().BlockFunc(func(g *jen.Group) {
 				gc := g.Var().Id("zero").Add(GeneratorUtil.TypeToJenCode(target.Type)).Line()
 				gc = gc.Add(target.Expr()).Op("=").Id("zero")

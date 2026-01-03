@@ -1,4 +1,4 @@
-## pgtype numeric
+## pgtype uint64
 
 First, let set up a project which use pgx v5 as library
 
@@ -95,9 +95,6 @@ func (m *iMapperImpl) ToDomain(in Database) Domain {
 	}
 	if v0 != nil {
 		out.B = *v0
-	} else {
-		var zero uint64
-		out.B = zero
 	}
 
 	var v1 *uint64

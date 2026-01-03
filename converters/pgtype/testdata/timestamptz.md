@@ -1,4 +1,4 @@
-## pgtype numeric
+## pgtype timestamptz
 
 First, let set up a project which use pgx v5 as library
 
@@ -94,9 +94,6 @@ func (m *iMapperImpl) ToDomain(in Database) Domain {
 	}
 	if v0 != nil {
 		out.B = *v0
-	} else {
-		var zero time.Time
-		out.B = zero
 	}
 
 	return out

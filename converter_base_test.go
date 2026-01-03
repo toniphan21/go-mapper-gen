@@ -146,11 +146,11 @@ func Test_pointerToTypeConverter(t *testing.T) {
 		},
 
 		{
-			Name:                         "else block is skipped if target is a variable",
+			Name:                         "else block is skipped if target has zero value",
 			SourceType:                   "*bool",
 			TargetType:                   "bool",
 			TargetSymbolWithoutFieldName: true,
-			TargetSymbolMetadata:         SymbolMetadata{IsVariable: true},
+			TargetSymbolMetadata:         SymbolMetadata{HasZeroValue: true},
 			ExpectedCanConvert:           true,
 			ExpectedCode: []string{
 				`if in.sourceField != nil {`,

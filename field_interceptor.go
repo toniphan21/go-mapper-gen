@@ -61,6 +61,16 @@ func (n *nilIfZeroFieldInterceptor) InterceptConvertField(converter Converter, c
 		return nil
 	}
 
+	if target.Metadata.HasZeroValue {
+		varName := ctx.NextVarName()
+		code := jen.Var().Id(varName).Add(GeneratorUtil.TypeToJenCode(source.Type)).Line()
+		code = code.If(source.Expr().Op("!=").Id(varName)).
+			BlockFunc(func(g *jen.Group) {
+				g.Add(convertedCode)
+			})
+		return code
+	}
+
 	varName := ctx.NextVarName()
 	code := jen.Var().Id(varName).Add(GeneratorUtil.TypeToJenCode(source.Type)).Line()
 	code = code.If(source.Expr().Op("==").Id(varName)).

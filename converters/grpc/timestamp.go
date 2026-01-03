@@ -95,7 +95,7 @@ func (c *timestampConverter) otherToTimeToTimestamp(ctx gen.ConverterContext, ta
 	varName := ctx.NextVarName()
 	code := jen.Line().Var().Id(varName).Add(gen.GeneratorUtil.TypeToJenCode(standardTimeType)).Line()
 
-	targetSymbol := gen.Symbol{VarName: varName, Type: standardTimeType, Metadata: gen.SymbolMetadata{IsVariable: true}}
+	targetSymbol := gen.Symbol{VarName: varName, Type: standardTimeType, Metadata: gen.SymbolMetadata{IsVariable: true, HasZeroValue: true}}
 	convertedCode := oc.ConvertField(ctx, targetSymbol, source)
 	if convertedCode == nil {
 		return nil

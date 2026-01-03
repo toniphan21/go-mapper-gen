@@ -1,5 +1,7 @@
 amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
 
+import "https://github.com/toniphan21/go-mapper-gen/releases/download/current/set.pkl"
+
 converter {
 	functions {
 		"github.com/toniphan21/go-mapper-gen/fc.MyIDToString"

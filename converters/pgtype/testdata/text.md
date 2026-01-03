@@ -1,4 +1,4 @@
-## pgtype numeric
+## pgtype text
 
 First, let set up a project which use pgx v5 as library
 
@@ -90,9 +90,6 @@ func (m *iMapperImpl) ToDomain(in Database) Domain {
 	}
 	if v0 != nil {
 		out.B = *v0
-	} else {
-		var zero string
-		out.B = zero
 	}
 
 	return out
@@ -204,9 +201,6 @@ func (m *iMapperImpl) ToDomain(in Database) Domain {
 	}
 	if v0 != nil {
 		out.B = *v0
-	} else {
-		var zero string
-		out.B = zero
 	}
 
 	return out
@@ -224,9 +218,7 @@ func (m *iMapperImpl) FromDomain(in Domain) Database {
 
 	var v0 *string
 	var v1 string
-	if in.B == v1 {
-		v0 = nil
-	} else {
+	if in.B != v1 {
 		v0 = &in.B
 	}
 	if v0 != nil {

@@ -42,7 +42,8 @@ type Symbol struct {
 }
 
 type SymbolMetadata struct {
-	IsVariable bool
+	IsVariable   bool
+	HasZeroValue bool
 }
 
 func newSymbol(varName string, fieldName string, typ types.Type) Symbol {
@@ -51,6 +52,14 @@ func newSymbol(varName string, fieldName string, typ types.Type) Symbol {
 	}
 	var fn = fieldName
 	return Symbol{VarName: varName, FieldName: &fn, Type: typ}
+}
+
+func newSymbolWithMetadata(varName string, fieldName string, typ types.Type, metadata SymbolMetadata) Symbol {
+	if fieldName == "" {
+		return Symbol{VarName: varName, FieldName: nil, Type: typ, Metadata: metadata}
+	}
+	var fn = fieldName
+	return Symbol{VarName: varName, FieldName: &fn, Type: typ, Metadata: metadata}
 }
 
 func (s Symbol) Expr() *jen.Statement {
