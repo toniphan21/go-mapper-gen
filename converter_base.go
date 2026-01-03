@@ -2,6 +2,7 @@ package gomappergen
 
 import (
 	"go/types"
+	"log/slog"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -11,7 +12,7 @@ import (
 type identicalTypeConverter struct {
 }
 
-func (c *identicalTypeConverter) Init(_ Parser, _ Config) {
+func (c *identicalTypeConverter) Init(_ Parser, _ Config, _ *slog.Logger) {
 	// no-op
 }
 
@@ -40,7 +41,7 @@ var _ Converter = (*identicalTypeConverter)(nil)
 type typeToPointerConverter struct {
 }
 
-func (c *typeToPointerConverter) Init(_ Parser, _ Config) {
+func (c *typeToPointerConverter) Init(_ Parser, _ Config, _ *slog.Logger) {
 	// no-op
 }
 
@@ -69,7 +70,7 @@ var _ Converter = (*typeToPointerConverter)(nil)
 type pointerToTypeConverter struct {
 }
 
-func (c *pointerToTypeConverter) Init(_ Parser, _ Config) {
+func (c *pointerToTypeConverter) Init(_ Parser, _ Config, _ *slog.Logger) {
 	// no-op
 }
 
@@ -111,7 +112,7 @@ var _ Converter = (*pointerToTypeConverter)(nil)
 type sliceConverter struct {
 }
 
-func (c *sliceConverter) Init(_ Parser, _ Config) {
+func (c *sliceConverter) Init(_ Parser, _ Config, _ *slog.Logger) {
 	// no-op
 }
 

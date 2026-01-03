@@ -2,6 +2,7 @@ package gomappergen
 
 import (
 	"go/types"
+	"log/slog"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -10,7 +11,7 @@ type numericConverter struct {
 	numericTypes []types.Type
 }
 
-func (c *numericConverter) Init(parser Parser, config Config) {
+func (c *numericConverter) Init(_ Parser, _ Config, _ *slog.Logger) {
 	c.numericTypes = []types.Type{
 		types.Typ[types.Int],
 		types.Typ[types.Int8],

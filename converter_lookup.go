@@ -3,6 +3,7 @@ package gomappergen
 import (
 	"fmt"
 	"go/types"
+	"log/slog"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -89,24 +90,30 @@ type LookupContext interface {
 	TargetDescriptor() *Descriptor
 
 	SourceDescriptor() *Descriptor
+
+	// Logger returns a slog handler that can be used for logging during
+	// code generation.
+	Logger() *slog.Logger
 }
 
 type lookupContext struct {
+	logger      *slog.Logger
 	converters  []*registeredConverter
 	target      Descriptor
 	source      Descriptor
 	interceptor FieldInterceptor
 }
 
-func newLookupContext(target Descriptor, source Descriptor) *lookupContext {
+func newLookupContext(target Descriptor, source Descriptor, logger *slog.Logger) *lookupContext {
 	return &lookupContext{
 		target: target,
 		source: source,
+		logger: logger,
 	}
 }
 
-func emptyLookupContext() *lookupContext {
-	return &lookupContext{}
+func emptyLookupContext(logger *slog.Logger) *lookupContext {
+	return &lookupContext{logger: logger}
 }
 
 var lkCache []lookUpCache
@@ -138,6 +145,7 @@ func (l *lookupContext) LookUp(current Converter, targetType, sourceType types.T
 
 	ctx := &lookupContext{
 		converters:  reachable,
+		logger:      l.logger,
 		target:      l.target,
 		source:      l.source,
 		interceptor: l.interceptor,
@@ -183,6 +191,10 @@ func (l *lookupContext) SourceDescriptor() *Descriptor {
 	return &l.source
 }
 
+func (l *lookupContext) Logger() *slog.Logger {
+	return l.logger
+}
+
 var _ LookupContext = (*lookupContext)(nil)
 
 func wrapFieldInterceptor(converter Converter, interceptor FieldInterceptor) Converter {
@@ -197,8 +209,8 @@ type wrappedConverter struct {
 	interceptor FieldInterceptor
 }
 
-func (w *wrappedConverter) Init(parser Parser, config Config) {
-	w.converter.Init(parser, config)
+func (w *wrappedConverter) Init(parser Parser, config Config, logger *slog.Logger) {
+	w.converter.Init(parser, config, logger)
 }
 
 func (w *wrappedConverter) Info() ConverterInfo {
@@ -215,10 +227,10 @@ func (w *wrappedConverter) ConvertField(ctx ConverterContext, target, source Sym
 
 var _ Converter = (*wrappedConverter)(nil)
 
-func findConverter(target, source Descriptor) (Converter, bool) {
+func findConverter(target, source Descriptor, logger *slog.Logger) (Converter, bool) {
 	for _, reg := range globalConverters {
 		LookUpTotalHits++
-		if reg.converter.CanConvert(newLookupContext(target, source), target.structFieldInfo.Type, source.structFieldInfo.Type) {
+		if reg.converter.CanConvert(newLookupContext(target, source, logger), target.structFieldInfo.Type, source.structFieldInfo.Type) {
 			if enableLookUpCache {
 				lkCache = append(lkCache, lookUpCache{
 					converter: reg.converter,

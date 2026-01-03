@@ -19,8 +19,6 @@ type Options struct {
 type OptionFunc func(*Options)
 
 func New(parser Parser, config Config, options ...OptionFunc) Generator {
-	initRegisteredConverters(parser, config)
-
 	o := &Options{
 		Parser:      parser,
 		FileManager: DefaultFileManager(),
@@ -30,6 +28,8 @@ func New(parser Parser, config Config, options ...OptionFunc) Generator {
 	for _, fn := range options {
 		fn(o)
 	}
+
+	initRegisteredConverters(parser, config, o.Logger)
 	return &generatorImpl{
 		parser:      o.Parser,
 		fileManager: o.FileManager,

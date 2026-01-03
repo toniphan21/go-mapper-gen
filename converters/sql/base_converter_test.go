@@ -297,7 +297,7 @@ func Test_baseConverter_convertible(t *testing.T) {
 			gen.RegisterConverter(gen.BuiltinConverters.Functions)
 			gen.RegisterConverter(tc.instance)
 			gen.RegisterConverter(gen.BuiltinConverters.Numeric)
-			tc.instance.Init(nil, gen.Config{})
+			tc.instance.Init(nil, gen.Config{}, nil)
 
 			gen.Test.RunConverterTestCase(t, ctc, tc.instance)
 		})

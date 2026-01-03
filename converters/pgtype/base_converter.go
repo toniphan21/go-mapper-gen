@@ -2,6 +2,7 @@ package pgtype
 
 import (
 	"go/types"
+	"log/slog"
 
 	"github.com/dave/jennifer/jen"
 	gen "github.com/toniphan21/go-mapper-gen"
@@ -25,7 +26,7 @@ type baseConverter[T, V any] struct {
 	pgtypeName   string
 }
 
-func (b *baseConverter[T, V]) Init(parser gen.Parser, config gen.Config) {
+func (b *baseConverter[T, V]) Init(_ gen.Parser, _ gen.Config, _ *slog.Logger) {
 	generated := gen.MakeTypeInfo(b.generatedType)
 	target := gen.MakeTypeInfo(b.targetType)
 	b.pgtypeName = generated.TypeName

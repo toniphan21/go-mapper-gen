@@ -57,6 +57,16 @@ type Struct struct {
 	// source and target structs.
 	Fields Fields `pkl:"fields"`
 
+	// Target's fields interceptors. This is a shortcut of fields { target }
+	// the value in both settings will be merged, the fields { target } will
+	// win if there is a duplication.
+	TargetFields *map[string]FieldInterceptor `pkl:"target_fields"`
+
+	// Source's fields interceptors. This is a shortcut of fields { source }
+	// the value in both settings will be merged, the fields { source } will
+	// win if there is a duplication.
+	SourceFields *map[string]FieldInterceptor `pkl:"source_fields"`
+
 	// Whether to prefer getter methods over direct field access
 	// on the source struct.
 	//

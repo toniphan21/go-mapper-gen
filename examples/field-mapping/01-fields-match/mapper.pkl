@@ -1,0 +1,19 @@
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
+
+import "https://github.com/toniphan21/go-mapper-gen/releases/download/current/set.pkl"
+
+packages {
+	["github.com/toniphan21/go-mapper-gen/mapping"] {
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["Target"] { 
+				source_struct_name = "Source"
+				
+				fields {
+					match = "exact"
+				}
+			}
+		}
+	}
+}

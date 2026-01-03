@@ -2,6 +2,7 @@ package gomappergen
 
 import (
 	"go/types"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -196,7 +197,7 @@ func Test_mapFieldNames(t *testing.T) {
 type dummyConverter struct {
 }
 
-func (d *dummyConverter) Init(parser Parser, config Config) {}
+func (d *dummyConverter) Init(_ Parser, _ Config, _ *slog.Logger) {}
 
 func (d *dummyConverter) Info() ConverterInfo {
 	return ConverterInfo{Name: "dummy"}

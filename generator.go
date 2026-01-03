@@ -100,10 +100,9 @@ func (mf *genMapFunc) appendUnconvertibleField(field string) {
 func generateMapper(parser Parser, file *jen.File, currentPkg *packages.Package, config PackageConfig, logger *slog.Logger) error {
 	ctx := &converterContext{
 		Context:       context.Background(),
-		lookupContext: emptyLookupContext(),
+		lookupContext: emptyLookupContext(logger),
 		jenFile:       file,
 		parser:        parser,
-		logger:        logger,
 	}
 
 	mapFuncs, err := collectMapFuncs(ctx, currentPkg, config, logger)
@@ -569,7 +568,7 @@ func fillMapFunc(
 		targetDescriptor := Descriptor{structInfo: mapFunc.targetStruct, structFieldInfo: &ti}
 		sourceDescriptor := Descriptor{structInfo: mapFunc.sourceStruct, structFieldInfo: &si}
 
-		converter, ok := findConverter(targetDescriptor, sourceDescriptor)
+		converter, ok := findConverter(targetDescriptor, sourceDescriptor, ctx.Logger())
 		if !ok {
 			mapFunc.unconvertibleFields = append(mapFunc.unconvertibleFields, target)
 			continue
@@ -583,6 +582,9 @@ func fillMapFunc(
 		var interceptor FieldInterceptor
 		if interceptors != nil {
 			interceptor = interceptors[target]
+			if interceptor != nil {
+				interceptor.Init(ctx.parser, ctx.Logger())
+			}
 		}
 
 		field := convertibleField{

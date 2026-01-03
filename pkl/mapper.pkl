@@ -117,6 +117,16 @@ class Struct {
     match = "ignore-case"
   }
 
+  /// Target's fields interceptors. This is a shortcut of fields { target }
+  /// the value in both settings will be merged, the fields { target } will
+  /// win if there is a duplication.
+  target_fields: Mapping<String, FieldInterceptor>?
+
+  /// Source's fields interceptors. This is a shortcut of fields { source }
+  /// the value in both settings will be merged, the fields { source } will
+  /// win if there is a duplication.
+  source_fields: Mapping<String, FieldInterceptor>?
+
   /// Whether to prefer getter methods over direct field access
   /// on the source struct.
   ///

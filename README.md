@@ -261,12 +261,13 @@ Take a look at examples of how to:
 
 - Config 
   [multiple structs](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/02-multiple-structs), 
-  [change functions' name](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/03-change-functions-name), 
-  manual field mapping.
-- [Use multiple mappers in a package](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/01-multiple-mappers).
-- Use functions to convert custom type: 
-  [use package level functions](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/01-use-package-level-functions),
-  [use variable methods](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/02-use-variable-methods).
+  [change functions' name](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/03-change-functions-name),
+  [multiple mappers in a package](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/config/01-multiple-mappers).
+- Convert custom type: 
+  [with package level functions](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/01-use-package-level-functions),
+  [with variable methods](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/functions-converter/02-use-variable-methods).
+- [Manual mapping fields](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/field-mapping/02-manual-mapping-fields),
+  [use function/method to convert individual field](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/field-mapping/03-use-function-on-individual-field).
 - [Use go-mapper-gen as a library.](https://github.com/toniphan21/go-mapper-gen/tree/main/examples/use-as-library)
 
 ---

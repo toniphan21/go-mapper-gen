@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"go/types"
+	"log/slog"
 
 	"github.com/dave/jennifer/jen"
 	gen "github.com/toniphan21/go-mapper-gen"
@@ -21,7 +22,7 @@ type timestampConverter struct {
 	orchestrator gen.GeneratedTypeOrchestrator
 }
 
-func (c *timestampConverter) Init(parser gen.Parser, config gen.Config) {
+func (c *timestampConverter) Init(_ gen.Parser, _ gen.Config, _ *slog.Logger) {
 	c.orchestrator = gen.GeneratedTypeOrchestrator{
 		Generated:                timestampTypeInfo,
 		Target:                   standardTimeTypeInfo,

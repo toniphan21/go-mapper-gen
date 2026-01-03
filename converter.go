@@ -94,7 +94,7 @@ type Converter interface {
 	// It allows the converter to initialize internal state, validate assumptions,
 	// or prepare data required during code generation. Init must not emit code.
 	// If no initialization is required, the implementation may be a no-op.
-	Init(parser Parser, config Config)
+	Init(parser Parser, config Config, logger *slog.Logger)
 
 	// Info returns metadata describing the converter.
 	Info() ConverterInfo
@@ -132,10 +132,6 @@ type ConverterContext interface {
 	// It guarantees no name collisions within the current generation scope.
 	NextVarName() string
 
-	// Logger returns a slog handler that can be used for logging during
-	// code generation.
-	Logger() *slog.Logger
-
 	// Run executes runner if the context has not been cancelled.
 	// If the context is done, Run returns nil and runner is not executed.
 	// This allows converters to respect generator-defined timeouts without
@@ -151,7 +147,6 @@ type converterContext struct {
 	context.Context
 	jenFile           *jen.File
 	parser            Parser
-	logger            *slog.Logger
 	currentVarCount   int
 	lookupContext     *lookupContext
 	emitTraceComments bool
@@ -207,7 +202,7 @@ func (c *converterContext) EmitTraceComments() bool {
 }
 
 func (c *converterContext) Logger() *slog.Logger {
-	return c.logger
+	return c.lookupContext.logger
 }
 
 func (c *converterContext) resetVarCount() {

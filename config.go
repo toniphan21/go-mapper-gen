@@ -334,8 +334,8 @@ func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 			DecorateFuncName:         mergeConfigValue(v.DecorateFunctionName, cf.GetDecorateFunctionName()),
 			Pointer:                  m.mapPointer(v.Pointer),
 			Fields:                   m.mapFieldConfig(v.Fields),
-			SourceFieldInterceptors:  m.mapFieldInterceptor(v.Fields.Source),
-			TargetFieldInterceptors:  m.mapFieldInterceptor(v.Fields.Target),
+			SourceFieldInterceptors:  m.mergeFieldInterceptor(v.SourceFields, v.Fields.Source),
+			TargetFieldInterceptors:  m.mergeFieldInterceptor(v.TargetFields, v.Fields.Target),
 			UseGetter:                mergeConfigValue(v.UseGetterIfAvailable, cf.GetUseGetterIfAvailable()),
 			GenerateSourceToTarget:   mergeConfigValue(v.GenerateSourceToTarget, cf.GetGenerateSourceToTarget()),
 			GenerateSourceFromTarget: mergeConfigValue(v.GenerateSourceFromTarget, cf.GetGenerateSourceFromTarget()),
@@ -432,6 +432,21 @@ func (m *configMapper) mapFieldConfig(in mapper.Fields) FieldConfig {
 		NameMatch: m.mapNameMatch(in.Match),
 		ManualMap: manualMap,
 	}
+}
+
+func (m *configMapper) mergeFieldInterceptor(inputs ...*map[string]mapper.FieldInterceptor) map[string]FieldInterceptor {
+	var result = make(map[string]FieldInterceptor)
+	for _, v := range inputs {
+		mapped := m.mapFieldInterceptor(v)
+		for k, i := range mapped {
+			result[k] = i
+		}
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 func (m *configMapper) mapFieldInterceptor(in *map[string]mapper.FieldInterceptor) map[string]FieldInterceptor {

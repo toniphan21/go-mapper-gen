@@ -1,0 +1,45 @@
+amends "https://github.com/toniphan21/go-mapper-gen/releases/download/current/Config.pkl"
+
+import "https://github.com/toniphan21/go-mapper-gen/releases/download/current/set.pkl"
+
+// remember to import "https://github.com/toniphan21/go-mapper-gen/releases/download/current/set.pkl"
+
+packages {
+	["github.com/toniphan21/go-mapper-gen/mapping"] {
+		source_pkg = "{CurrentPackage}"
+
+		structs {
+			["Target"] { 
+				source_struct_name = "Source"
+				
+				// These are shortcut which perform exactly like `{ fields { target ... source ... } }
+				// these configs are merged, the config in { fields ... } will override shortcut in here
+				// in case field are duplicated.
+				target_fields {
+					["FirstName"] = set.via_function("github.com/toniphan21/go-mapper-gen/mapping.TrimName")
+				}
+				source_fields {
+					["GivenName"] = set.via_method("github.com/toniphan21/go-mapper-gen/mapping.Helper", "Trim")
+				}
+				
+				fields {
+					match = "exact"
+					
+					map {
+						["ID"] = "Id"
+						["FirstName"] = "GivenName"
+						["LastName"] = "Surname"
+					}
+					
+					target {
+						["LastName"] = set.via_function("github.com/toniphan21/go-mapper-gen/mapping.TrimName")
+					}
+					
+					source {
+						["Surname"] = set.via_method("github.com/toniphan21/go-mapper-gen/mapping.Helper", "Trim")
+					}
+				}
+			}
+		}
+	}
+}

@@ -10,9 +10,21 @@ function nil_if_zero(): mapper.FieldInterceptor = new mapper.FieldInterceptor {
   type = "nil-if-zero"
 }
 
-function via_function(symbol: String): mapper.FieldInterceptor = new mapper.FieldInterceptor {
+function use_function(symbol: String): mapper.FieldInterceptor = new mapper.FieldInterceptor {
   type = "use-function"
   options {
     ["symbol"] = symbol
   }
 }
+
+function via_function(symbol: String): mapper.FieldInterceptor = use_function(symbol)
+
+function use_method(variableSymbol: String, methodName: String): mapper.FieldInterceptor = new mapper.FieldInterceptor {
+  type = "use-function"
+  options {
+    ["symbol"] = variableSymbol
+    ["method"] = methodName
+  }
+}
+
+function via_method(variableSymbol: String, methodName: String): mapper.FieldInterceptor = use_method(variableSymbol, methodName)

@@ -154,10 +154,10 @@ func prioritizeRegisteredConverters(parsedConfig Config) {
 	})
 }
 
-func initRegisteredConverters(parser Parser, parsedConfig Config) {
+func initRegisteredConverters(parser Parser, parsedConfig Config, logger *slog.Logger) {
 	prioritizeRegisteredConverters(parsedConfig)
 	for _, v := range globalConverters {
-		v.converter.Init(parser, parsedConfig)
+		v.converter.Init(parser, parsedConfig, logger)
 	}
 }
 

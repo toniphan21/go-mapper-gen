@@ -84,7 +84,7 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 	require.NoError(t, err)
 
 	if tc.Config != nil {
-		converter.Init(parser, *tc.Config)
+		converter.Init(parser, *tc.Config, NewNoopLogger())
 	}
 
 	var pkg *packages.Package
@@ -116,10 +116,9 @@ func (h *converterTest) RunConverterTestCase(t *testing.T, tc ConverterTestCase,
 	jf := jen.NewFilePathName(goMod.GetModule(), "test")
 	ctx := &converterContext{
 		Context:           context.Background(),
-		lookupContext:     newLookupContext(targetDescriptor, sourceDescriptor),
+		lookupContext:     newLookupContext(targetDescriptor, sourceDescriptor, NewNoopLogger()),
 		jenFile:           jf,
 		parser:            parser,
-		logger:            NewNoopLogger(),
 		emitTraceComments: tc.EmitTraceComments,
 	}
 

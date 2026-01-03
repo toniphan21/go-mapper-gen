@@ -2,6 +2,7 @@ package gomappergen
 
 import (
 	"go/types"
+	"log/slog"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -28,7 +29,7 @@ type functionsConverter struct {
 	availableFunctions []funcConverter
 }
 
-func (c *functionsConverter) Init(parser Parser, config Config) {
+func (c *functionsConverter) Init(parser Parser, config Config, _ *slog.Logger) {
 	if len(config.ConverterFunctions) == 0 {
 		// no-op
 		return
@@ -38,7 +39,7 @@ func (c *functionsConverter) Init(parser Parser, config Config) {
 	for _, v := range config.ConverterFunctions {
 		fn, ok := parser.FindFunction(v.PackagePath, v.TypeName)
 		if ok {
-			if len(fn.Params) != 1 && len(fn.Results) != 1 {
+			if len(fn.Params) != 1 || len(fn.Results) != 1 {
 				continue
 			}
 
@@ -55,7 +56,7 @@ func (c *functionsConverter) Init(parser Parser, config Config) {
 		if len(varFns) > 0 {
 			variableName := v.TypeName
 			for _, vfn := range varFns {
-				if len(vfn.Params) != 1 && len(vfn.Results) != 1 {
+				if len(vfn.Params) != 1 || len(vfn.Results) != 1 {
 					continue
 				}
 
