@@ -8,7 +8,7 @@ module github.com/toniphan21/awesome
 go 1.25
 
 require github.com/dave/jennifer v1.7.1
-require github.com/toniphan21/go-mapper-gen v0.4.0
+require github.com/toniphan21/go-mapper-gen v0.5.0
 ```
 
 The `go.sum` is:
@@ -16,15 +16,14 @@ The `go.sum` is:
 ```go.sum
 github.com/dave/jennifer v1.7.1 h1:B4jJJDHelWcDhlRQxWeo0Npa/pYKBLrirAQoTN45txo=
 github.com/dave/jennifer v1.7.1/go.mod h1:nXbxhEmQfOZhWml3D1cDK5M1FLnMSozpbFN/m3RmGZc=
-github.com/toniphan21/go-mapper-gen v0.4.0 h1:1/rjoqiewbuw7j/R8047LYhvajXzAxd3grUVJVxL4w4=
-github.com/toniphan21/go-mapper-gen v0.4.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
+github.com/toniphan21/go-mapper-gen v0.5.0 h1:z9hOm9KpyGCG1yKLiHTGD3qkUViybUbzweKNHR1rGwc=
+github.com/toniphan21/go-mapper-gen v0.5.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
 ```
 
 Then set up a command to use as a generator
 
 ```go
 // file: cmd/generator/main.go
-
 package main
 
 import (
@@ -66,6 +65,9 @@ func main() {
 		// optional, if nil use DefaultFileManager
 		// FileManager: nil,
 
+		// optional, if nil use DefaultFieldInterceptorProvider
+		// FieldInterceptorProvider: nil,
+
 		// optional, if nil use slog.DefaultLogger
 		// Logger: nil
 
@@ -101,7 +103,7 @@ func (c *awesomeConverter) CanConvert(ctx gen.LookupContext, targetType, sourceT
 	return false
 }
 
-func (c *awesomeConverter) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+func (c *awesomeConverter) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
 	// generate your code here
 	return nil
 }

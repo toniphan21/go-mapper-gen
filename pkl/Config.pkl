@@ -1,4 +1,4 @@
-// Configuration for go-mapper-gen - v0.5.0
+// Configuration for go-mapper-gen - v0.6.0
 @go.Package { name = "github.com/toniphan21/go-mapper-gen/pkg/pkl" }
 module gomappergen.Config
 

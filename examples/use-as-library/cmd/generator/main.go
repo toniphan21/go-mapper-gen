@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -40,6 +39,9 @@ func main() {
 		// optional, if nil use DefaultFileManager
 		// FileManager: nil,
 
+		// optional, if nil use DefaultFieldInterceptorProvider
+		// FieldInterceptorProvider: nil,
+
 		// optional, if nil use slog.DefaultLogger
 		// Logger: nil
 
@@ -75,7 +77,7 @@ func (c *awesomeConverter) CanConvert(ctx gen.LookupContext, targetType, sourceT
 	return false
 }
 
-func (c *awesomeConverter) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol, opts gen.ConverterOption) jen.Code {
+func (c *awesomeConverter) ConvertField(ctx gen.ConverterContext, target, source gen.Symbol) jen.Code {
 	// generate your code here
 	return nil
 }
