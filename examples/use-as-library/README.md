@@ -16,8 +16,8 @@ The `go.sum` is:
 ```go.sum
 github.com/dave/jennifer v1.7.1 h1:B4jJJDHelWcDhlRQxWeo0Npa/pYKBLrirAQoTN45txo=
 github.com/dave/jennifer v1.7.1/go.mod h1:nXbxhEmQfOZhWml3D1cDK5M1FLnMSozpbFN/m3RmGZc=
-github.com/toniphan21/go-mapper-gen v0.5.0 h1:z9hOm9KpyGCG1yKLiHTGD3qkUViybUbzweKNHR1rGwc=
-github.com/toniphan21/go-mapper-gen v0.5.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
+github.com/toniphan21/go-mapper-gen v0.6.0 h1:i079Y510Kt6JYfvVW1fvqtKMcuDjm/KJGJqKv0sY/UY=
+github.com/toniphan21/go-mapper-gen v0.6.0/go.mod h1:xq9nD8FltQ5wLE81cEH/aXCukKNwA5//11LzamzLMEU=
 ```
 
 Then set up a command to use as a generator
@@ -86,7 +86,7 @@ func main() {
 
 type awesomeConverter struct{}
 
-func (c *awesomeConverter) Init(parser gen.Parser, config gen.Config) {
+func (c *awesomeConverter) Init(parser gen.Parser, config gen.Config, logger *slog.Logger) {
 	// no-op
 }
 

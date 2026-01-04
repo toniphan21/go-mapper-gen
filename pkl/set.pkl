@@ -1,4 +1,4 @@
-// Field helper functions for go-mapper-gen - v0.6.0
+// Field helper functions for go-mapper-gen - v0.7.0
 @go.Package { name = "github.com/toniphan21/go-mapper-gen/pkg/pkl/set" }
 module gomappergen.set
 

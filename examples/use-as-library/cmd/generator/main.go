@@ -60,7 +60,7 @@ func main() {
 
 type awesomeConverter struct{}
 
-func (c *awesomeConverter) Init(parser gen.Parser, config gen.Config) {
+func (c *awesomeConverter) Init(parser gen.Parser, config gen.Config, logger *slog.Logger) {
 	// no-op
 }
 
