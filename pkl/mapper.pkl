@@ -5,6 +5,8 @@ module gomappergen.mapper
 
 import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.11.1#/go.pkl"
 
+typealias DecoratorMode = "adaptive" | "always" | "never"
+
 class BuiltInConverter {
   enable_identical: Boolean = true
   enable_slice: Boolean = true
@@ -100,6 +102,15 @@ class Struct {
   /// Overrides package level decorate_function_name when set.
   decorate_function_name: String?
 
+  /// Controls whether and how decorators are generated.
+  ///
+  /// - "adaptive": Generate decorators only when customization hooks are needed.
+  /// - "always": Always generate decorator types.
+  /// - "never": Never generate decorators.
+  ///
+  /// Overrides package level decorator_mode when set.
+  decorator_mode: DecoratorMode?
+
   /// Controls pointer usage in generated mapping code.
   ///
   /// - "none": Neither source nor target is treated as a pointer.
@@ -193,11 +204,12 @@ open class Package {
   /// - "always": Always generate decorator types.
   /// - "never": Never generate decorators.
   ///
-  decorator_mode: "adaptive" | "always" | "never" = "adaptive"
+  /// Can be overridden per struct.
+  decorator_mode: DecoratorMode = "adaptive"
 
-  /// Name of the generated decorator interface.
+  /// Name of the generated decorator interface. Used only when decorator_mode != "never"
   ///
-  /// Used only when decorator_mode != "never"
+  /// Can be overridden per struct.
   decorator_interface_name: String = "iMapperDecorator"
 
   /// Name of the no-op decorator implementation. Empty string

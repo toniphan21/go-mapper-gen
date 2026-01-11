@@ -95,7 +95,9 @@ type StructConfig struct {
 
 	SourceToTargetFuncName   string
 	SourceFromTargetFuncName string
-	DecorateFuncName         string
+
+	DecoratorMode    DecoratorMode
+	DecorateFuncName string
 
 	Pointer Pointer
 	Fields  FieldConfig
@@ -306,7 +308,7 @@ func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 		InterfaceName:          cf.GetInterfaceName(),
 		ImplementationName:     cf.GetImplementationName(),
 		ConstructorName:        cf.GetConstructorName(),
-		DecoratorMode:          m.mapDecoratorMode(cf.GetDecoratorMode()),
+		DecoratorMode:          m.mapDecoratorMode(cf.GetDecoratorMode().String()),
 		DecoratorInterfaceName: cf.GetDecoratorInterfaceName(),
 		DecoratorNoOpName:      cf.GetDecoratorNoopName(),
 		GenerateGoDoc:          cf.GetGenerateGoDoc(),
@@ -332,6 +334,7 @@ func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 			SourceToTargetFuncName:   mergeConfigValue(v.SourceToTargetFunctionName, cf.GetSourceToTargetFunctionName()),
 			SourceFromTargetFuncName: mergeConfigValue(v.SourceFromTargetFunctionName, cf.GetSourceFromTargetFunctionName()),
 			DecorateFuncName:         mergeConfigValue(v.DecorateFunctionName, cf.GetDecorateFunctionName()),
+			DecoratorMode:            m.mapDecoratorMode(mergeConfigValue(v.DecoratorMode, cf.GetDecoratorMode()).String()),
 			Pointer:                  m.mapPointer(v.Pointer),
 			Fields:                   m.mapFieldConfig(v.Fields),
 			SourceFieldInterceptors:  m.mergeFieldInterceptor(v.SourceFields, v.Fields.Source),

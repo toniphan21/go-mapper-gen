@@ -1,6 +1,8 @@
 // Code generated from Pkl module `gomappergen.mapper`. DO NOT EDIT.
 package mapper
 
+import "github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/decoratormode"
+
 // Configuration for mapping between a specific source struct
 // and a specific target struct.
 //
@@ -42,6 +44,15 @@ type Struct struct {
 	//
 	// Overrides package level decorate_function_name when set.
 	DecorateFunctionName *string `pkl:"decorate_function_name"`
+
+	// Controls whether and how decorators are generated.
+	//
+	// - "adaptive": Generate decorators only when customization hooks are needed.
+	// - "always": Always generate decorator types.
+	// - "never": Never generate decorators.
+	//
+	// Overrides package level decorator_mode when set.
+	DecoratorMode *decoratormode.DecoratorMode `pkl:"decorator_mode"`
 
 	// Controls pointer usage in generated mapping code.
 	//

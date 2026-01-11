@@ -32,17 +32,18 @@ type UserMessage struct {
 }
 ```
 
-### mode types (default); decorator_mode adaptive (default)
+### mode types (default); decorator_mode always
 
 
 #### User <-> UserMessage
 
-Because User <-> UserMessage is mappable so decorator will not be emitted
+Decorator is always emitted
 
 ```pkl
 packages {
 	["github.com/toniphan21/go-mapper-gen/decorator"] {
 		source_pkg = "{CurrentPackage}"
+		decorator_mode = "always"
 
 		structs {
 			["User"] { source_struct_name = "UserMessage" }
@@ -65,17 +66,29 @@ type iMapper interface {
 	FromUser(in User) UserMessage
 }
 
-func new_iMapper() iMapper {
-	return &iMapperImpl{}
+type iMapperDecorator interface {
+	decorateToUser(in *UserMessage, out *User)
+
+	decorateFromUser(in *User, out *UserMessage)
 }
 
-type iMapperImpl struct{}
+func new_iMapper(decorator iMapperDecorator) iMapper {
+	return &iMapperImpl{decorator: decorator}
+}
+
+type iMapperImpl struct {
+	decorator iMapperDecorator
+}
 
 func (m *iMapperImpl) ToUser(in UserMessage) User {
 	var out User
 
 	out.ID = in.ID
 	out.Name = in.Name
+
+	if m.decorator != nil {
+		m.decorator.decorateToUser(&in, &out)
+	}
 
 	return out
 }
@@ -86,9 +99,19 @@ func (m *iMapperImpl) FromUser(in User) UserMessage {
 	out.ID = in.ID
 	out.Name = in.Name
 
+	if m.decorator != nil {
+		m.decorator.decorateFromUser(&in, &out)
+	}
+
 	return out
 }
 
-var _ iMapper = (*iMapperImpl)(nil)
-```
+type iMapperDecoratorNoOp struct{}
 
+func (d *iMapperDecoratorNoOp) decorateToUser(in *UserMessage, out *User) {}
+
+func (d *iMapperDecoratorNoOp) decorateFromUser(in *User, out *UserMessage) {}
+
+var _ iMapper = (*iMapperImpl)(nil)
+var _ iMapperDecorator = (*iMapperDecoratorNoOp)(nil)
+```

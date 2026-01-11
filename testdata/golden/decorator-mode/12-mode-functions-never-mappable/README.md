@@ -1,4 +1,4 @@
-## Decorator Mode
+## Decorator Mode - Package Level
 
 Firstly, let set up an empty golang project without any dependency.
 

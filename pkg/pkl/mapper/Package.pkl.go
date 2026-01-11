@@ -1,6 +1,8 @@
 // Code generated from Pkl module `gomappergen.mapper`. DO NOT EDIT.
 package mapper
 
+import "github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/decoratormode"
+
 type Package interface {
 	GetMode() string
 
@@ -14,7 +16,7 @@ type Package interface {
 
 	GetSourceFromTargetFunctionName() string
 
-	GetDecoratorMode() string
+	GetDecoratorMode() decoratormode.DecoratorMode
 
 	GetDecoratorInterfaceName() string
 
@@ -85,11 +87,13 @@ type PackageImpl struct {
 	// - "adaptive": Generate decorators only when customization hooks are needed.
 	// - "always": Always generate decorator types.
 	// - "never": Never generate decorators.
-	DecoratorMode string `pkl:"decorator_mode"`
-
-	// Name of the generated decorator interface.
 	//
-	// Used only when decorator_mode != "never"
+	// Can be overridden per struct.
+	DecoratorMode decoratormode.DecoratorMode `pkl:"decorator_mode"`
+
+	// Name of the generated decorator interface. Used only when decorator_mode != "never"
+	//
+	// Can be overridden per struct.
 	DecoratorInterfaceName string `pkl:"decorator_interface_name"`
 
 	// Name of the no-op decorator implementation. Empty string
@@ -193,13 +197,15 @@ func (rcv PackageImpl) GetSourceFromTargetFunctionName() string {
 // - "adaptive": Generate decorators only when customization hooks are needed.
 // - "always": Always generate decorator types.
 // - "never": Never generate decorators.
-func (rcv PackageImpl) GetDecoratorMode() string {
+//
+// Can be overridden per struct.
+func (rcv PackageImpl) GetDecoratorMode() decoratormode.DecoratorMode {
 	return rcv.DecoratorMode
 }
 
-// Name of the generated decorator interface.
+// Name of the generated decorator interface. Used only when decorator_mode != "never"
 //
-// Used only when decorator_mode != "never"
+// Can be overridden per struct.
 func (rcv PackageImpl) GetDecoratorInterfaceName() string {
 	return rcv.DecoratorInterfaceName
 }

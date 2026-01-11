@@ -27,7 +27,9 @@ func TestGolden(t *testing.T) {
 		{file: "testdata/import.md"},
 		{file: "testdata/placeholder.md"},
 		{file: "testdata/decorator.md"},
-		{file: "testdata/decorator-mode.md"},
+
+		{file: "testdata/decorator-mode-pkg.md"},
+		{file: "testdata/decorator-mode-pkg-adaptive-override-in-struct.md"},
 
 		{file: "testdata/field-interceptor.md"},
 	}

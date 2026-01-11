@@ -73,6 +73,7 @@ type genMapFunc struct {
 	unconvertibleFields []string
 	targetFieldsIndex   map[string]int
 	sourceFieldsIndex   map[string]int
+	decoratorMode       DecoratorMode
 }
 
 func (mf *genMapFunc) paramsAndResults() ([]jen.Code, []jen.Code) {
@@ -152,9 +153,9 @@ func generateMapperFunctions(ctx *converterContext, currentPkg *packages.Package
 		params, results := mf.paramsAndResults()
 
 		useDecorator := len(mf.missingFields) > 0 || len(mf.unconvertibleFields) > 0
-		if config.DecoratorMode == DecoratorModeAlways {
+		if mf.decoratorMode == DecoratorModeAlways {
 			useDecorator = true
-		} else if config.DecoratorMode == DecoratorModeNever {
+		} else if mf.decoratorMode == DecoratorModeNever {
 			useDecorator = false
 		}
 
@@ -259,6 +260,10 @@ func generateDecoratorInterface(ctx *converterContext, config PackageConfig, map
 	var signatures []jen.Code
 
 	for _, mf := range mapFuncs {
+		if mf.decoratorMode == DecoratorModeNever {
+			continue
+		}
+
 		var params []jen.Code
 		params = append(params, jen.Id("in").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.sourceStruct.Type))))
 		params = append(params, jen.Id("out").Add(jen.Op("*").Add(GeneratorUtil.TypeToJenCode(mf.targetStruct.Type))))
@@ -314,9 +319,9 @@ func generateMapperImplementation(ctx *converterContext, config PackageConfig, m
 
 		shouldEmitDecoratorComment := len(mf.missingFields) > 0 || len(mf.unconvertibleFields) > 0
 		shouldEmitDecoratorCall := shouldEmitDecoratorComment
-		if config.DecoratorMode == DecoratorModeAlways {
+		if mf.decoratorMode == DecoratorModeAlways {
 			shouldEmitDecoratorCall = true
-		} else if config.DecoratorMode == DecoratorModeNever {
+		} else if mf.decoratorMode == DecoratorModeNever {
 			shouldEmitDecoratorCall = false
 		}
 
@@ -372,6 +377,10 @@ func generateDecoratorNoOp(ctx *converterContext, config PackageConfig, mapFuncs
 	ctx.jenFile.Type().Id(config.DecoratorNoOpName).Struct().Line()
 
 	for _, mf := range mapFuncs {
+		if mf.decoratorMode == DecoratorModeNever {
+			continue
+		}
+
 		ctx.resetVarCount()
 
 		var body []jen.Code
@@ -499,6 +508,7 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 				sourcePointer:     useSourcePointer,
 				targetFieldsIndex: makeFieldsIndex(targetStruct.Fields),
 				sourceFieldsIndex: makeFieldsIndex(sourceStruct.Fields),
+				decoratorMode:     cf.DecoratorMode,
 			}
 
 			fillMapFunc(ctx, &mapFunc, targetStruct.Fields, sourceStruct.Fields, cf.Fields, cf.UseGetter, cf.TargetFieldInterceptors)
@@ -526,6 +536,7 @@ func collectMapFuncs(ctx *converterContext, currentPkg *packages.Package, config
 				sourcePointer:     useTargetPointer,
 				targetFieldsIndex: makeFieldsIndex(sourceStruct.Fields),
 				sourceFieldsIndex: makeFieldsIndex(targetStruct.Fields),
+				decoratorMode:     cf.DecoratorMode,
 			}
 
 			fillMapFunc(ctx, &mapFunc, sourceStruct.Fields, targetStruct.Fields, cf.Fields.Flip(), cf.UseGetter, cf.SourceFieldInterceptors)
@@ -669,6 +680,14 @@ func shouldUseDecorator(fns []*genMapFunc, cf PackageConfig) bool {
 	}
 
 	for _, mf := range fns {
+		if mf.decoratorMode == DecoratorModeNever {
+			continue
+		}
+
+		if mf.decoratorMode == DecoratorModeAlways {
+			return true
+		}
+
 		if len(mf.missingFields) > 0 {
 			return true
 		}
