@@ -671,14 +671,6 @@ func mapFieldNames(targetFields, sourceFields map[string]StructFieldInfo, config
 }
 
 func shouldUseDecorator(fns []*genMapFunc, cf PackageConfig) bool {
-	if cf.DecoratorMode == DecoratorModeAlways {
-		return true
-	}
-
-	if cf.DecoratorMode == DecoratorModeNever {
-		return false
-	}
-
 	for _, mf := range fns {
 		if mf.decoratorMode == DecoratorModeNever {
 			continue

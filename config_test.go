@@ -54,7 +54,6 @@ type expectedConfig struct {
 	InterfaceName          *string
 	ImplementationName     *string
 	ConstructorName        *string
-	DecoratorMode          *DecoratorMode
 	DecoratorInterfaceName *string
 	DecoratorNoOpName      *string
 	GenerateGoDoc          *bool
@@ -69,6 +68,7 @@ type expectedStruct struct {
 	SourceToTargetFuncName   *string
 	SourceFromTargetFuncName *string
 	DecorateFuncName         *string
+	DecoratorMode            *DecoratorMode
 	Pointer                  *Pointer
 	FieldsNameMatch          *NameMatch
 	FieldsManualMap          *map[string]string
@@ -83,7 +83,6 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageCon
 		InterfaceName:          Default.InterfaceName,
 		ImplementationName:     Default.ImplementationName,
 		ConstructorName:        Default.ConstructorName,
-		DecoratorMode:          Default.DecoratorMode,
 		DecoratorInterfaceName: Default.DecoratorInterfaceName,
 		DecoratorNoOpName:      Default.DecoratorNoOpName,
 		GenerateGoDoc:          true,
@@ -110,9 +109,6 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageCon
 		}
 		if override.ConstructorName != nil {
 			result.ConstructorName = *override.ConstructorName
-		}
-		if override.DecoratorMode != nil {
-			result.DecoratorMode = *override.DecoratorMode
 		}
 		if override.DecoratorInterfaceName != nil {
 			result.DecoratorInterfaceName = *override.DecoratorInterfaceName
@@ -158,6 +154,9 @@ func buildConfig(override *expectedConfig, structs ...expectedStruct) PackageCon
 		}
 		if v.DecorateFuncName != nil {
 			item.DecorateFuncName = *v.DecorateFuncName
+		}
+		if v.DecoratorMode != nil {
+			item.DecoratorMode = *v.DecoratorMode
 		}
 		if v.Pointer != nil {
 			item.Pointer = *v.Pointer

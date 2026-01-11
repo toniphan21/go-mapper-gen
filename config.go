@@ -58,7 +58,6 @@ type PackageConfig struct {
 	InterfaceName          string
 	ImplementationName     string
 	ConstructorName        string
-	DecoratorMode          DecoratorMode
 	DecoratorInterfaceName string
 	DecoratorNoOpName      string
 	Structs                []StructConfig
@@ -308,7 +307,6 @@ func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 		InterfaceName:          cf.GetInterfaceName(),
 		ImplementationName:     cf.GetImplementationName(),
 		ConstructorName:        cf.GetConstructorName(),
-		DecoratorMode:          m.mapDecoratorMode(cf.GetDecoratorMode().String()),
 		DecoratorInterfaceName: cf.GetDecoratorInterfaceName(),
 		DecoratorNoOpName:      cf.GetDecoratorNoopName(),
 		GenerateGoDoc:          cf.GetGenerateGoDoc(),
