@@ -29,12 +29,13 @@ type Output struct {
 }
 
 type BuiltInConverterConfig struct {
-	UseIdentical     bool
-	UseSlice         bool
-	UseTypeToPointer bool
-	UsePointerToType bool
-	UseNumeric       bool
-	UseFunctions     bool
+	UseIdentical       bool
+	UseSlice           bool
+	UseTypeToPointer   bool
+	UsePointerToType   bool
+	UseNumeric         bool
+	UseFunctions       bool
+	UseFunctionsStrict bool
 }
 
 type LibraryConverterConfig struct {
@@ -50,6 +51,7 @@ func (c *BuiltInConverterConfig) EnableAll() {
 	c.UsePointerToType = true
 	c.UseNumeric = true
 	c.UseFunctions = true
+	c.UseFunctionsStrict = true
 }
 
 type PackageConfig struct {
@@ -204,39 +206,40 @@ func ParseConfig(path string, provider FieldInterceptorProvider) (*Config, error
 }
 
 func MakeConfig(cfg pkl.Config, provider FieldInterceptorProvider) (*Config, error) {
-	m := &configMapper{
-		provider: provider,
+	m := &ConfigMapper{
+		Provider: provider,
 	}
-	pkgConfigs, err := m.mapPackagesConfig(cfg.Packages, cfg.All)
+	pkgConfigs, err := m.MapPackagesConfig(cfg.Packages, cfg.All)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Config{
-		BuiltInConverters:   m.mapBuiltInConverterConfig(cfg.Converter.BuiltIn),
-		LibraryConverters:   m.mapLibraryConverterConfig(cfg.Converter.BuiltIn),
-		ConverterFunctions:  m.mapConverterFunctions(cfg.Converter.Functions),
+		BuiltInConverters:   m.MapBuiltInConverterConfig(cfg.Converter.BuiltIn),
+		LibraryConverters:   m.MapLibraryConverterConfig(cfg.Converter.BuiltIn),
+		ConverterFunctions:  m.MapConverterFunctions(cfg.Converter.Functions),
 		ConverterPriorities: cfg.Converter.Priorities,
 		Packages:            pkgConfigs,
 	}, nil
 }
 
-type configMapper struct {
-	provider FieldInterceptorProvider
+type ConfigMapper struct {
+	Provider FieldInterceptorProvider
 }
 
-func (m *configMapper) mapBuiltInConverterConfig(in mapper.BuiltInConverter) BuiltInConverterConfig {
+func (m *ConfigMapper) MapBuiltInConverterConfig(in mapper.BuiltInConverter) BuiltInConverterConfig {
 	return BuiltInConverterConfig{
-		UseIdentical:     in.EnableIdentical,
-		UseSlice:         in.EnableSlice,
-		UseTypeToPointer: in.EnableTypeToPointer,
-		UsePointerToType: in.EnablePointerToType,
-		UseNumeric:       in.EnableNumeric,
-		UseFunctions:     in.EnableFunctions,
+		UseIdentical:       in.EnableIdentical,
+		UseSlice:           in.EnableSlice,
+		UseTypeToPointer:   in.EnableTypeToPointer,
+		UsePointerToType:   in.EnablePointerToType,
+		UseNumeric:         in.EnableNumeric,
+		UseFunctions:       in.EnableFunctions,
+		UseFunctionsStrict: in.EnableFunctionsStrict,
 	}
 }
 
-func (m *configMapper) mapLibraryConverterConfig(in mapper.BuiltInConverter) LibraryConverterConfig {
+func (m *ConfigMapper) MapLibraryConverterConfig(in mapper.BuiltInConverter) LibraryConverterConfig {
 	return LibraryConverterConfig{
 		UseGRPC:   in.Library.EnableGrpc,
 		UsePGType: in.Library.EnablePgtype,
@@ -244,7 +247,7 @@ func (m *configMapper) mapLibraryConverterConfig(in mapper.BuiltInConverter) Lib
 	}
 }
 
-func (m *configMapper) mapConverterFunctions(list *[]string) []ConvertFunctionConfig {
+func (m *ConfigMapper) MapConverterFunctions(list *[]string) []ConvertFunctionConfig {
 	if list == nil {
 		return nil
 	}
@@ -256,7 +259,7 @@ func (m *configMapper) mapConverterFunctions(list *[]string) []ConvertFunctionCo
 	return result
 }
 
-func (m *configMapper) mapPackagesConfig(packages map[string]pkl.Package, all pkl.All) (map[string][]PackageConfig, error) {
+func (m *ConfigMapper) MapPackagesConfig(packages map[string]pkl.Package, all pkl.All) (map[string][]PackageConfig, error) {
 	var result = make(map[string][]PackageConfig)
 	if packages == nil {
 		return result, nil
@@ -296,7 +299,7 @@ func (m *configMapper) mapPackagesConfig(packages map[string]pkl.Package, all pk
 	return result, nil
 }
 
-func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
+func (m *ConfigMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 	if len(cf.GetStructs()) == 0 {
 		return nil
 	}
@@ -349,7 +352,7 @@ func (m *configMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 	return &pkgCf
 }
 
-func (m *configMapper) mapMode(val string) Mode {
+func (m *ConfigMapper) mapMode(val string) Mode {
 	switch val {
 	case "types":
 		return ModeTypes
@@ -360,7 +363,7 @@ func (m *configMapper) mapMode(val string) Mode {
 	}
 }
 
-func (m *configMapper) mapDecoratorMode(val string) DecoratorMode {
+func (m *ConfigMapper) mapDecoratorMode(val string) DecoratorMode {
 	switch val {
 	case "adaptive":
 		return DecoratorModeAdaptive
@@ -373,7 +376,7 @@ func (m *configMapper) mapDecoratorMode(val string) DecoratorMode {
 	}
 }
 
-func (m *configMapper) mapPointer(val string) Pointer {
+func (m *ConfigMapper) mapPointer(val string) Pointer {
 	switch val {
 	case "none":
 		return PointerNone
@@ -388,7 +391,7 @@ func (m *configMapper) mapPointer(val string) Pointer {
 	}
 }
 
-func (m *configMapper) mapNameMatch(val string) NameMatch {
+func (m *ConfigMapper) mapNameMatch(val string) NameMatch {
 	switch val {
 	case "ignore-case":
 		return NameMatchIgnoreCase
@@ -399,7 +402,7 @@ func (m *configMapper) mapNameMatch(val string) NameMatch {
 	}
 }
 
-func (m *configMapper) mergeOutput(outputs ...*pkl.Output) Output {
+func (m *ConfigMapper) mergeOutput(outputs ...*pkl.Output) Output {
 	output := &Output{}
 	for _, o := range outputs {
 		if o == nil {
@@ -421,7 +424,7 @@ func (m *configMapper) mergeOutput(outputs ...*pkl.Output) Output {
 	return *output
 }
 
-func (m *configMapper) mapFieldConfig(in mapper.Fields) FieldConfig {
+func (m *ConfigMapper) mapFieldConfig(in mapper.Fields) FieldConfig {
 	var manualMap map[string]string
 	if in.Map != nil {
 		manualMap = make(map[string]string)
@@ -435,7 +438,7 @@ func (m *configMapper) mapFieldConfig(in mapper.Fields) FieldConfig {
 	}
 }
 
-func (m *configMapper) mergeFieldInterceptor(inputs ...*map[string]mapper.FieldInterceptor) map[string]FieldInterceptor {
+func (m *ConfigMapper) mergeFieldInterceptor(inputs ...*map[string]mapper.FieldInterceptor) map[string]FieldInterceptor {
 	var result = make(map[string]FieldInterceptor)
 	for _, v := range inputs {
 		mapped := m.mapFieldInterceptor(v)
@@ -450,7 +453,7 @@ func (m *configMapper) mergeFieldInterceptor(inputs ...*map[string]mapper.FieldI
 	return result
 }
 
-func (m *configMapper) mapFieldInterceptor(in *map[string]mapper.FieldInterceptor) map[string]FieldInterceptor {
+func (m *ConfigMapper) mapFieldInterceptor(in *map[string]mapper.FieldInterceptor) map[string]FieldInterceptor {
 	if in == nil {
 		return nil
 	}
@@ -462,7 +465,7 @@ func (m *configMapper) mapFieldInterceptor(in *map[string]mapper.FieldIntercepto
 
 	var result = make(map[string]FieldInterceptor)
 	for k, v := range input {
-		i := m.provider.MakeFieldInterceptor(v.Type, v.Options)
+		i := m.Provider.MakeFieldInterceptor(v.Type, v.Options)
 		if i != nil {
 			result[k] = i
 		}

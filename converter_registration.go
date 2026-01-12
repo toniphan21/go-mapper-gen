@@ -248,19 +248,21 @@ func RegisterBuiltinConverters(config BuiltInConverterConfig) {
 }
 
 type builtinConverters struct {
-	IdenticalType Converter
-	Slice         Converter
-	TypeToPointer Converter
-	PointerToType Converter
-	Numeric       Converter
-	Functions     Converter
+	IdenticalType   Converter
+	Slice           Converter
+	TypeToPointer   Converter
+	PointerToType   Converter
+	Numeric         Converter
+	Functions       Converter
+	FunctionsStrict Converter
 }
 
 var BuiltinConverters = builtinConverters{
-	IdenticalType: &identicalTypeConverter{},
-	Slice:         &sliceConverter{},
-	TypeToPointer: &typeToPointerConverter{},
-	PointerToType: &pointerToTypeConverter{},
-	Numeric:       &numericConverter{},
-	Functions:     &functionsConverter{},
+	IdenticalType:   &identicalTypeConverter{},
+	Slice:           &sliceConverter{},
+	TypeToPointer:   &typeToPointerConverter{},
+	PointerToType:   &pointerToTypeConverter{},
+	Numeric:         &numericConverter{},
+	Functions:       &functionsConverter{},
+	FunctionsStrict: &functionsConverter{},
 }

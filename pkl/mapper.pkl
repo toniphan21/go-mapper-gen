@@ -14,6 +14,7 @@ class BuiltInConverter {
   enable_pointer_to_type: Boolean = true
   enable_numeric: Boolean = true
   enable_functions: Boolean = true
+  enable_functions_strict: Boolean = true
 
   library: BuiltInLibraryConverter = new BuiltInLibraryConverter{}
 }
@@ -34,7 +35,7 @@ class Converter {
     "github.com/toniphan21/go-mapper-gen.sliceConverter"
     "github.com/toniphan21/go-mapper-gen.typeToPointerConverter"
     "github.com/toniphan21/go-mapper-gen.pointerToTypeConverter"
-    "github.com/toniphan21/go-mapper-gen.functionsConverter"
+    "github.com/toniphan21/go-mapper-gen.strictFunctionsConverter"
 
     "github.com/toniphan21/go-mapper-gen/converters/pgtype.*"
     "github.com/toniphan21/go-mapper-gen/converters/sql.*"
@@ -43,6 +44,7 @@ class Converter {
     "*"
 
     "github.com/toniphan21/go-mapper-gen.numericConverter"
+    "github.com/toniphan21/go-mapper-gen.functionsConverter"
   }
 }
 

@@ -73,9 +73,7 @@ func Run(cmd RunCommand) error {
 		}
 	}
 
-	gen.ClearAllRegisteredConverters()
-	gen.RegisterBuiltinConverters(parsedConfig.BuiltInConverters)
-	loadLibraryConverters(parsedConfig.LibraryConverters)
+	LoadConverters(*parsedConfig)
 	if cmd.RegisterConverters != nil {
 		cmd.RegisterConverters()
 	}
@@ -129,6 +127,12 @@ func Run(cmd RunCommand) error {
 
 	logger.Info("")
 	return nil
+}
+
+func LoadConverters(config gen.Config) {
+	gen.ClearAllRegisteredConverters()
+	gen.RegisterBuiltinConverters(config.BuiltInConverters)
+	loadLibraryConverters(config.LibraryConverters)
 }
 
 func loadLibraryConverters(cf gen.LibraryConverterConfig) {

@@ -33,6 +33,8 @@ func TestGolden(t *testing.T) {
 		{file: "testdata/decorator-mode-pkg-always-override-in-struct.md"},
 
 		{file: "testdata/field-interceptor.md"},
+
+		{file: "testdata/functions-strict.md"},
 	}
 
 	for _, tc := range cases {

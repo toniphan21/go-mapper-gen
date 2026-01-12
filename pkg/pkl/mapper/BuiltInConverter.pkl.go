@@ -14,5 +14,7 @@ type BuiltInConverter struct {
 
 	EnableFunctions bool `pkl:"enable_functions"`
 
+	EnableFunctionsStrict bool `pkl:"enable_functions_strict"`
+
 	Library BuiltInLibraryConverter `pkl:"library"`
 }

@@ -342,3 +342,287 @@ func Test_functionsConverter_Use_Functions_And_MethodsInVariable(t *testing.T) {
 		})
 	}
 }
+
+func Test_strictFunctionsConverter_UseFunctions(t *testing.T) {
+	additionalCode := []string{
+		`type CustomType struct {`,
+		`	ID string`,
+		`}`,
+		``,
+		`func CustomTypeToString(t CustomType) string {`,
+		`	return t.ID`,
+		`}`,
+		``,
+		`func StringToCustomType(s string) CustomType {`,
+		`	return CustomType {`,
+		`		ID: s,`,
+		`	}`,
+		`}`,
+		``,
+	}
+	config := &Config{
+		ConverterFunctions: []ConvertFunctionConfig{
+			{
+				PackagePath: "github.com/toniphan21/go-mapper-gen/example",
+				TypeName:    "CustomTypeToString",
+			},
+			{
+				PackagePath: "github.com/toniphan21/go-mapper-gen/example",
+				TypeName:    "StringToCustomType",
+			},
+		},
+	}
+	cases := []ConverterTestCase{
+		{
+			Name:               "convert string to CustomType use StringToCustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "CustomType",
+			SourceType:         "string",
+			ExpectedCanConvert: true,
+			ExpectedCode:       []string{"out.targetField = StringToCustomType(in.sourceField)"},
+		},
+
+		{
+			Name:               "convert CustomType to string use CustomTypeToString",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "string",
+			SourceType:         "CustomType",
+			ExpectedCanConvert: true,
+			ExpectedCode:       []string{"out.targetField = CustomTypeToString(in.sourceField)"},
+		},
+
+		{
+			Name:               "cannot convert *string to CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "CustomType",
+			SourceType:         "*string",
+			ExpectedCanConvert: false,
+		},
+
+		{
+			Name:               "cannot convert string to *CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "*CustomType",
+			SourceType:         "string",
+			ExpectedCanConvert: false,
+		},
+
+		{
+			Name:               "cannot convert *string to *CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "*CustomType",
+			SourceType:         "*string",
+			ExpectedCanConvert: false,
+		},
+		// ---
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			registerBuiltInConverter(&identicalTypeConverter{}, 0)
+			registerBuiltInConverter(&sliceConverter{}, 1)
+			registerBuiltInConverter(&typeToPointerConverter{}, 2)
+			registerBuiltInConverter(&pointerToTypeConverter{}, 3)
+
+			converter := &strictFunctionsConverter{}
+			Test.RunConverterTestCase(t, tc, converter)
+		})
+	}
+}
+
+func Test_strictFunctionsConverter_UseMethodsInVariable(t *testing.T) {
+	additionalCode := []string{
+		`type CustomType struct {`,
+		`	ID string`,
+		`}`,
+		``,
+		`type convertHelper struct{}`,
+		``,
+		`func (h *convertHelper) CustomTypeToString(t CustomType) string {`,
+		`	return t.ID`,
+		`}`,
+		``,
+		`func (h *convertHelper) StringToCustomType(s string) CustomType {`,
+		`	return CustomType {`,
+		`		ID: s,`,
+		`	}`,
+		`}`,
+		``,
+		`var Converters = &convertHelper{}`,
+		``,
+	}
+
+	config := &Config{
+		ConverterFunctions: []ConvertFunctionConfig{
+			{
+				PackagePath: "github.com/toniphan21/go-mapper-gen/example",
+				TypeName:    "Converters",
+			},
+		},
+	}
+
+	cases := []ConverterTestCase{
+		{
+			Name:               "convert string to CustomType use StringToCustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "CustomType",
+			SourceType:         "string",
+			ExpectedCanConvert: true,
+			ExpectedCode:       []string{"out.targetField = Converters.StringToCustomType(in.sourceField)"},
+		},
+
+		{
+			Name:               "convert CustomType to string use CustomTypeToString",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "string",
+			SourceType:         "CustomType",
+			ExpectedCanConvert: true,
+			ExpectedCode:       []string{"out.targetField = Converters.CustomTypeToString(in.sourceField)"},
+		},
+
+		{
+			Name:               "cannot convert *string to CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "CustomType",
+			SourceType:         "*string",
+			ExpectedCanConvert: false,
+		},
+
+		{
+			Name:               "cannot convert string to *CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "*CustomType",
+			SourceType:         "string",
+			ExpectedCanConvert: false,
+		},
+
+		{
+			Name:               "cannot convert *string to *CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "*CustomType",
+			SourceType:         "*string",
+			ExpectedCanConvert: false,
+		},
+		// ---
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			registerBuiltInConverter(&identicalTypeConverter{}, 0)
+			registerBuiltInConverter(&sliceConverter{}, 1)
+			registerBuiltInConverter(&typeToPointerConverter{}, 2)
+			registerBuiltInConverter(&pointerToTypeConverter{}, 3)
+
+			converter := &strictFunctionsConverter{}
+			Test.RunConverterTestCase(t, tc, converter)
+		})
+	}
+}
+
+func Test_strictFunctionsConverter_Use_Functions_And_MethodsInVariable(t *testing.T) {
+	additionalCode := []string{
+		`type CustomType struct {`,
+		`	ID string`,
+		`}`,
+		``,
+		`type convertHelper struct{}`,
+		``,
+		`func (h *convertHelper) CustomTypeToString(t CustomType) string {`,
+		`	return t.ID`,
+		`}`,
+		``,
+		`func StringToCustomType(s string) CustomType {`,
+		`	return CustomType {`,
+		`		ID: s,`,
+		`	}`,
+		`}`,
+		``,
+		`var Converters = &convertHelper{}`,
+		``,
+	}
+
+	config := &Config{
+		ConverterFunctions: []ConvertFunctionConfig{
+			{
+				PackagePath: "github.com/toniphan21/go-mapper-gen/example",
+				TypeName:    "Converters",
+			},
+			{
+				PackagePath: "github.com/toniphan21/go-mapper-gen/example",
+				TypeName:    "StringToCustomType",
+			},
+		},
+	}
+
+	cases := []ConverterTestCase{
+		{
+			Name:               "convert string to CustomType use StringToCustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "CustomType",
+			SourceType:         "string",
+			ExpectedCanConvert: true,
+			ExpectedCode:       []string{"out.targetField = StringToCustomType(in.sourceField)"},
+		},
+
+		{
+			Name:               "convert CustomType to string use CustomTypeToString",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "string",
+			SourceType:         "CustomType",
+			ExpectedCanConvert: true,
+			ExpectedCode:       []string{"out.targetField = Converters.CustomTypeToString(in.sourceField)"},
+		},
+
+		{
+			Name:               "cannot convert *string to CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "CustomType",
+			SourceType:         "*string",
+			ExpectedCanConvert: false,
+		},
+
+		{
+			Name:               "cannot convert string to *CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "*CustomType",
+			SourceType:         "string",
+			ExpectedCanConvert: false,
+		},
+
+		{
+			Name:               "cannot convert *string to *CustomType",
+			AdditionalCode:     additionalCode,
+			Config:             config,
+			TargetType:         "*string",
+			SourceType:         "*CustomType",
+			ExpectedCanConvert: false,
+		},
+		// ---
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			registerBuiltInConverter(&identicalTypeConverter{}, 0)
+			registerBuiltInConverter(&sliceConverter{}, 1)
+			registerBuiltInConverter(&typeToPointerConverter{}, 2)
+			registerBuiltInConverter(&pointerToTypeConverter{}, 3)
+
+			converter := &strictFunctionsConverter{}
+			Test.RunConverterTestCase(t, tc, converter)
+		})
+	}
+}

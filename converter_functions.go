@@ -25,17 +25,19 @@ func (m *funcConverterMatch) CanConvert() bool {
 	return m.fn != nil
 }
 
-type functionsConverter struct {
+type baseFunctionsConverter struct {
+	converter          Converter
 	availableFunctions []funcConverter
+	strict             bool
 }
 
-func (c *functionsConverter) Init(parser Parser, config Config, _ *slog.Logger) {
+func (b *baseFunctionsConverter) Init(parser Parser, config Config, _ *slog.Logger) {
 	if len(config.ConverterFunctions) == 0 {
 		// no-op
 		return
 	}
 
-	c.availableFunctions = make([]funcConverter, 0)
+	b.availableFunctions = make([]funcConverter, 0)
 	for _, v := range config.ConverterFunctions {
 		fn, ok := parser.FindFunction(v.PackagePath, v.TypeName)
 		if ok {
@@ -43,7 +45,7 @@ func (c *functionsConverter) Init(parser Parser, config Config, _ *slog.Logger) 
 				continue
 			}
 
-			c.availableFunctions = append(c.availableFunctions, funcConverter{
+			b.availableFunctions = append(b.availableFunctions, funcConverter{
 				sourceType: fn.Params[0],
 				targetType: fn.Results[0],
 				pkgPath:    fn.PackagePath,
@@ -60,7 +62,7 @@ func (c *functionsConverter) Init(parser Parser, config Config, _ *slog.Logger) 
 					continue
 				}
 
-				c.availableFunctions = append(c.availableFunctions, funcConverter{
+				b.availableFunctions = append(b.availableFunctions, funcConverter{
 					sourceType:   vfn.Params[0],
 					targetType:   vfn.Results[0],
 					variableName: &variableName,
@@ -73,22 +75,14 @@ func (c *functionsConverter) Init(parser Parser, config Config, _ *slog.Logger) 
 	}
 }
 
-func (c *functionsConverter) Info() ConverterInfo {
-	return ConverterInfo{
-		Name:                 "built-in functionsConverter",
-		ShortForm:            "(func(T) -> V)(T)",
-		ShortFormDescription: "invoke converter functions",
-	}
-}
-
-func (c *functionsConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
-	match := c.matchFuncConverter(ctx, targetType, sourceType)
+func (b *baseFunctionsConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
+	match := b.matchFuncConverter(ctx, targetType, sourceType)
 
 	return match.CanConvert()
 }
 
-func (c *functionsConverter) matchFuncConverter(ctx LookupContext, targetType, sourceType types.Type) funcConverterMatch {
-	for _, fn := range c.availableFunctions {
+func (b *baseFunctionsConverter) matchFuncConverter(ctx LookupContext, targetType, sourceType types.Type) funcConverterMatch {
+	for _, fn := range b.availableFunctions {
 		identicalTarget := TypeUtil.IsIdentical(fn.targetType, targetType)
 		identicalSource := TypeUtil.IsIdentical(fn.sourceType, sourceType)
 
@@ -96,13 +90,17 @@ func (c *functionsConverter) matchFuncConverter(ctx LookupContext, targetType, s
 			return funcConverterMatch{fn: &fn}
 		}
 
-		before, err := ctx.LookUp(c, fn.sourceType, sourceType)
+		if b.strict {
+			continue
+		}
+
+		before, err := ctx.LookUp(b.converter, fn.sourceType, sourceType)
 		convertibleSource := err == nil
 		if identicalTarget && convertibleSource {
 			return funcConverterMatch{before: before, fn: &fn, after: nil}
 		}
 
-		after, err := ctx.LookUp(c, targetType, fn.targetType)
+		after, err := ctx.LookUp(b.converter, targetType, fn.targetType)
 		convertibleTarget := err == nil
 		if identicalSource && convertibleTarget {
 			return funcConverterMatch{before: nil, fn: &fn, after: after}
@@ -116,9 +114,9 @@ func (c *functionsConverter) matchFuncConverter(ctx LookupContext, targetType, s
 	return funcConverterMatch{}
 }
 
-func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
-	return ctx.Run(c, func() jen.Code {
-		match := c.matchFuncConverter(ctx, target.Type, source.Type)
+func (b *baseFunctionsConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return ctx.Run(b.converter, func() jen.Code {
+		match := b.matchFuncConverter(ctx, target.Type, source.Type)
 		if !match.CanConvert() {
 			return nil
 		}
@@ -204,4 +202,58 @@ func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source S
 	})
 }
 
+type functionsConverter struct {
+	base baseFunctionsConverter
+}
+
+func (c *functionsConverter) Init(parser Parser, config Config, logger *slog.Logger) {
+	c.base.strict = false
+	c.base.converter = c
+	c.base.Init(parser, config, logger)
+}
+
+func (c *functionsConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
+	return c.base.CanConvert(ctx, targetType, sourceType)
+}
+
+func (c *functionsConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return c.base.ConvertField(ctx, target, source)
+}
+
+func (c *functionsConverter) Info() ConverterInfo {
+	return ConverterInfo{
+		Name:                 "built-in functionsConverter",
+		ShortForm:            "loosely invoke (T) -> V",
+		ShortFormDescription: "invoke converter functions loosely",
+	}
+}
+
 var _ Converter = (*functionsConverter)(nil)
+
+type strictFunctionsConverter struct {
+	base baseFunctionsConverter
+}
+
+func (c *strictFunctionsConverter) Init(parser Parser, config Config, logger *slog.Logger) {
+	c.base.strict = true
+	c.base.converter = c
+	c.base.Init(parser, config, logger)
+}
+
+func (c *strictFunctionsConverter) CanConvert(ctx LookupContext, targetType, sourceType types.Type) bool {
+	return c.base.CanConvert(ctx, targetType, sourceType)
+}
+
+func (c *strictFunctionsConverter) ConvertField(ctx ConverterContext, target, source Symbol) jen.Code {
+	return c.base.ConvertField(ctx, target, source)
+}
+
+func (c *strictFunctionsConverter) Info() ConverterInfo {
+	return ConverterInfo{
+		Name:                 "built-in strictFunctionsConverter",
+		ShortForm:            "strictly invoke (T) -> V",
+		ShortFormDescription: "invoke converter functions strictly",
+	}
+}
+
+var _ Converter = (*strictFunctionsConverter)(nil)
