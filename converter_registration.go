@@ -236,6 +236,11 @@ func RegisterBuiltinConverters(config BuiltInConverterConfig) {
 		priority++
 	}
 
+	if config.UseFunctionsStrict {
+		registerBuiltInConverter(BuiltinConverters.FunctionsStrict, priority)
+		priority++
+	}
+
 	if config.UseNumeric {
 		registerBuiltInConverter(BuiltinConverters.Numeric, priority)
 		priority++
@@ -264,5 +269,5 @@ var BuiltinConverters = builtinConverters{
 	PointerToType:   &pointerToTypeConverter{},
 	Numeric:         &numericConverter{},
 	Functions:       &functionsConverter{},
-	FunctionsStrict: &functionsConverter{},
+	FunctionsStrict: &strictFunctionsConverter{},
 }

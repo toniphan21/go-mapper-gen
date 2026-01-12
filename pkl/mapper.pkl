@@ -1,11 +1,12 @@
-// Mapper configuration for go-mapper-gen - v0.7.0
+// Mapper configuration for go-mapper-gen - v0.8.0
 // Can be embeded into a bigger pkl configuration schema.
 @go.Package { name = "github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper" }
 module gomappergen.mapper
 
 import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.11.1#/go.pkl"
 
-typealias DecoratorMode = "adaptive" | "always" | "never"
+typealias DecoratorMode = "adaptive"|"always"|"never"
+typealias Pointer = "none"|"source-only"|"target-only"|"both"
 
 class BuiltInConverter {
   enable_identical: Boolean = true
@@ -16,7 +17,7 @@ class BuiltInConverter {
   enable_functions: Boolean = true
   enable_functions_strict: Boolean = true
 
-  library: BuiltInLibraryConverter = new BuiltInLibraryConverter{}
+  library: BuiltInLibraryConverter = new BuiltInLibraryConverter {}
 }
 
 class BuiltInLibraryConverter {
@@ -54,7 +55,7 @@ class FieldInterceptor {
 }
 
 class Fields {
-  match: "exact" | "ignore-case" = "ignore-case"
+  match: "exact"|"ignore-case" = "ignore-case"
 
   map: Mapping<String, String>?
 
@@ -120,7 +121,8 @@ class Struct {
   /// - "target-only": Target struct is returned or populated as a pointer.
   /// - "both": Both source and target are pointers.
   ///
-  pointer: "none" | "source-only" | "target-only" | "both" = "none"
+  /// Overrides package level pointer when set.
+  pointer: Pointer?
 
   /// Field-level mapping configuration.
   ///
@@ -170,7 +172,7 @@ open class Package {
   /// - "functions": Generates package-level mapping functions only (no interface or struct).
   ///
   /// Note: When mode = "functions", type-related naming options are ignored.
-  mode: "types" | "functions" = "types"
+  mode: "types"|"functions" = "types"
 
   /// Name of the generated mapper interface.
   ///
@@ -208,6 +210,16 @@ open class Package {
   ///
   /// Can be overridden per struct.
   decorator_mode: DecoratorMode = "adaptive"
+
+  /// Controls pointer usage in generated mapping code.
+  ///
+  /// - "none": Neither source nor target is treated as a pointer.
+  /// - "source-only": Source struct is passed as a pointer.
+  /// - "target-only": Target struct is returned or populated as a pointer.
+  /// - "both": Both source and target are pointers.
+  ///
+  /// Can be overridden per struct.
+  pointer: Pointer = "none"
 
   /// Name of the generated decorator interface. Used only when decorator_mode != "never"
   ///

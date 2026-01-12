@@ -22,10 +22,12 @@ func fromTargetEnum(in TargetEnum) SourceEnum {
 
 type Target struct {
 	Field int
+	Status TargetEnum
 }
 
 type Source struct {
 	Field int32
+	Status SourceEnum
 }
 ```
 
@@ -60,6 +62,7 @@ func ToTarget(in Source) Target {
 	var out Target
 
 	out.Field = int(in.Field)
+	out.Status = TargetEnum(in.Status)
 
 	return out
 }
@@ -69,6 +72,7 @@ func FromTarget(in Target) Source {
 	var out Source
 
 	out.Field = int32(in.Field)
+	out.Status = fromTargetEnum(in.Status)
 
 	return out
 }

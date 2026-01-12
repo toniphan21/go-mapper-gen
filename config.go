@@ -336,7 +336,7 @@ func (m *ConfigMapper) mapMapper(cf pkl.Package, all pkl.All) *PackageConfig {
 			SourceFromTargetFuncName: mergeConfigValue(v.SourceFromTargetFunctionName, cf.GetSourceFromTargetFunctionName()),
 			DecorateFuncName:         mergeConfigValue(v.DecorateFunctionName, cf.GetDecorateFunctionName()),
 			DecoratorMode:            m.mapDecoratorMode(mergeConfigValue(v.DecoratorMode, cf.GetDecoratorMode()).String()),
-			Pointer:                  m.mapPointer(v.Pointer),
+			Pointer:                  m.mapPointer(mergeConfigValue(v.Pointer, cf.GetPointer()).String()),
 			Fields:                   m.mapFieldConfig(v.Fields),
 			SourceFieldInterceptors:  m.mergeFieldInterceptor(v.SourceFields, v.Fields.Source),
 			TargetFieldInterceptors:  m.mergeFieldInterceptor(v.TargetFields, v.Fields.Target),

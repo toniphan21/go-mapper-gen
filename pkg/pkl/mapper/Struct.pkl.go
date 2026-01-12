@@ -1,7 +1,10 @@
 // Code generated from Pkl module `gomappergen.mapper`. DO NOT EDIT.
 package mapper
 
-import "github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/decoratormode"
+import (
+	"github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/decoratormode"
+	"github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/pointer"
+)
 
 // Configuration for mapping between a specific source struct
 // and a specific target struct.
@@ -60,7 +63,9 @@ type Struct struct {
 	// - "source-only": Source struct is passed as a pointer.
 	// - "target-only": Target struct is returned or populated as a pointer.
 	// - "both": Both source and target are pointers.
-	Pointer string `pkl:"pointer"`
+	//
+	// Overrides package level pointer when set.
+	Pointer *pointer.Pointer `pkl:"pointer"`
 
 	// Field-level mapping configuration.
 	//

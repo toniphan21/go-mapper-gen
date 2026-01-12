@@ -1,7 +1,10 @@
 // Code generated from Pkl module `gomappergen.mapper`. DO NOT EDIT.
 package mapper
 
-import "github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/decoratormode"
+import (
+	"github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/decoratormode"
+	"github.com/toniphan21/go-mapper-gen/pkg/pkl/mapper/pointer"
+)
 
 type Package interface {
 	GetMode() string
@@ -17,6 +20,8 @@ type Package interface {
 	GetSourceFromTargetFunctionName() string
 
 	GetDecoratorMode() decoratormode.DecoratorMode
+
+	GetPointer() pointer.Pointer
 
 	GetDecoratorInterfaceName() string
 
@@ -90,6 +95,16 @@ type PackageImpl struct {
 	//
 	// Can be overridden per struct.
 	DecoratorMode decoratormode.DecoratorMode `pkl:"decorator_mode"`
+
+	// Controls pointer usage in generated mapping code.
+	//
+	// - "none": Neither source nor target is treated as a pointer.
+	// - "source-only": Source struct is passed as a pointer.
+	// - "target-only": Target struct is returned or populated as a pointer.
+	// - "both": Both source and target are pointers.
+	//
+	// Can be overridden per struct.
+	Pointer pointer.Pointer `pkl:"pointer"`
 
 	// Name of the generated decorator interface. Used only when decorator_mode != "never"
 	//
@@ -201,6 +216,18 @@ func (rcv PackageImpl) GetSourceFromTargetFunctionName() string {
 // Can be overridden per struct.
 func (rcv PackageImpl) GetDecoratorMode() decoratormode.DecoratorMode {
 	return rcv.DecoratorMode
+}
+
+// Controls pointer usage in generated mapping code.
+//
+// - "none": Neither source nor target is treated as a pointer.
+// - "source-only": Source struct is passed as a pointer.
+// - "target-only": Target struct is returned or populated as a pointer.
+// - "both": Both source and target are pointers.
+//
+// Can be overridden per struct.
+func (rcv PackageImpl) GetPointer() pointer.Pointer {
+	return rcv.Pointer
 }
 
 // Name of the generated decorator interface. Used only when decorator_mode != "never"
